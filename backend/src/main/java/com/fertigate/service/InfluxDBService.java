@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -33,46 +34,210 @@ public class InfluxDBService {
     @Value("${influxdb.org}")
     private String org;
 
+    @Value("${influxdb.write.retry.max-attempts:3}")
+    private int maxRetryAttempts;
+
+    @Value("${influxdb.write.retry.delay-ms:1000}")
+    private long retryDelayMs;
+
+    private final AtomicLong writeCount = new AtomicLong(0);
+    private final AtomicLong writeErrorCount = new AtomicLong(0);
+    private final AtomicLong retryCount = new AtomicLong(0);
+
     public void writeSensorData(SensorDataDTO sensorData) {
+        writeSensorDataInternal(sensorData);
+    }
+
+    public boolean writeSensorDataWithRetry(SensorDataDTO sensorData, int maxRetries) {
+        int attempts = 0;
+        int actualMaxRetries = Math.min(maxRetries, maxRetryAttempts);
+        
+        while (attempts <= actualMaxRetries) {
+            try {
+                writeSensorDataInternal(sensorData);
+                return true;
+            } catch (Exception e) {
+                attempts++;
+                retryCount.incrementAndGet();
+                
+                if (attempts > actualMaxRetries) {
+                    writeErrorCount.incrementAndGet();
+                    log.error("Failed to write sensor data after {} attempts: device={}, error={}",
+                            attempts, sensorData.getDeviceCode(), e.getMessage());
+                    return false;
+                }
+                
+                log.warn("Retry {} writing sensor data: device={}, error={}",
+                        attempts, sensorData.getDeviceCode(), e.getMessage());
+                
+                try {
+                    Thread.sleep(retryDelayMs * attempts);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void writeSensorDataInternal(SensorDataDTO sensorData) {
         try {
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             
             Map<String, Double> values = sensorData.getValues();
             if (values == null || values.isEmpty()) {
+                log.debug("No values to write for device: {}", sensorData.getDeviceCode());
                 return;
             }
 
-            Instant timestamp = sensorData.getTimestamp() != null 
-                ? sensorData.getTimestamp().atZone(ZoneId.systemDefault()).toInstant()
-                : Instant.now();
+            Instant timestamp = determineTimestamp(sensorData);
 
+            List<Point> points = new ArrayList<>();
+            
             for (Map.Entry<String, Double> entry : values.entrySet()) {
                 if (entry.getValue() == null) {
                     continue;
                 }
 
                 Point point = Point.measurement("sensor_data")
-                        .addTag("device_code", sensorData.getDeviceCode())
-                        .addTag("device_name", sensorData.getDeviceName())
-                        .addTag("device_type", sensorData.getDeviceType())
-                        .addTag("zone", sensorData.getZone())
-                        .addTag("gateway_id", sensorData.getGatewayId())
+                        .addTag("device_code", nullSafe(sensorData.getDeviceCode()))
+                        .addTag("device_name", nullSafe(sensorData.getDeviceName()))
+                        .addTag("device_type", nullSafe(sensorData.getDeviceType()))
+                        .addTag("zone", nullSafe(sensorData.getZone()))
+                        .addTag("gateway_id", nullSafe(sensorData.getGatewayId()))
                         .addField(entry.getKey(), entry.getValue())
                         .time(timestamp, WritePrecision.MS);
 
-                writeApi.writePoint(point);
+                if (sensorData.getIsRetransmission() != null) {
+                    point.addTag("is_retransmission", sensorData.getIsRetransmission().toString());
+                }
+
+                points.add(point);
+            }
+
+            if (!points.isEmpty()) {
+                writeApi.writePoints(points);
+                writeCount.addAndGet(points.size());
+                log.debug("Written {} points to InfluxDB for device: {}", 
+                        points.size(), sensorData.getDeviceCode());
             }
             
-            log.debug("Sensor data written to InfluxDB: {}", sensorData.getDeviceCode());
         } catch (Exception e) {
             log.error("Error writing sensor data to InfluxDB: {}", e.getMessage());
+            throw e;
         }
     }
 
-    public void writeSensorDataBatch(List<SensorDataDTO> sensorDataList) {
-        for (SensorDataDTO data : sensorDataList) {
-            writeSensorData(data);
+    private Instant determineTimestamp(SensorDataDTO sensorData) {
+        if (sensorData.getOriginalTimestamp() != null) {
+            return sensorData.getOriginalTimestamp()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant();
         }
+        
+        if (sensorData.getTimestamp() != null) {
+            return sensorData.getTimestamp()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant();
+        }
+        
+        return Instant.now();
+    }
+
+    private String nullSafe(String value) {
+        return value != null ? value : "unknown";
+    }
+
+    public void writeSensorDataBatch(List<SensorDataDTO> sensorDataList) {
+        if (sensorDataList == null || sensorDataList.isEmpty()) {
+            return;
+        }
+
+        try {
+            WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
+            List<Point> allPoints = new ArrayList<>();
+
+            for (SensorDataDTO sensorData : sensorDataList) {
+                Map<String, Double> values = sensorData.getValues();
+                if (values == null || values.isEmpty()) {
+                    continue;
+                }
+
+                Instant timestamp = determineTimestamp(sensorData);
+
+                for (Map.Entry<String, Double> entry : values.entrySet()) {
+                    if (entry.getValue() == null) {
+                        continue;
+                    }
+
+                    Point point = Point.measurement("sensor_data")
+                            .addTag("device_code", nullSafe(sensorData.getDeviceCode()))
+                            .addTag("device_name", nullSafe(sensorData.getDeviceName()))
+                            .addTag("device_type", nullSafe(sensorData.getDeviceType()))
+                            .addTag("zone", nullSafe(sensorData.getZone()))
+                            .addTag("gateway_id", nullSafe(sensorData.getGatewayId()))
+                            .addField(entry.getKey(), entry.getValue())
+                            .time(timestamp, WritePrecision.MS);
+
+                    if (sensorData.getIsRetransmission() != null) {
+                        point.addTag("is_retransmission", sensorData.getIsRetransmission().toString());
+                    }
+
+                    allPoints.add(point);
+                }
+            }
+
+            if (!allPoints.isEmpty()) {
+                writeApi.writePoints(allPoints);
+                writeCount.addAndGet(allPoints.size());
+                log.info("Batch written {} points to InfluxDB for {} devices", 
+                        allPoints.size(), sensorDataList.size());
+            }
+            
+        } catch (Exception e) {
+            log.error("Error writing batch sensor data to InfluxDB: {}", e.getMessage());
+            
+            log.info("Falling back to individual writes");
+            for (SensorDataDTO data : sensorDataList) {
+                try {
+                    writeSensorDataWithRetry(data, 2);
+                } catch (Exception ex) {
+                    log.error("Fallback write also failed: {}", ex.getMessage());
+                }
+            }
+        }
+    }
+
+    public boolean writeSensorDataBatchWithRetry(List<SensorDataDTO> sensorDataList, int maxRetries) {
+        int attempts = 0;
+        int actualMaxRetries = Math.min(maxRetries, maxRetryAttempts);
+        
+        while (attempts <= actualMaxRetries) {
+            try {
+                writeSensorDataBatch(sensorDataList);
+                return true;
+            } catch (Exception e) {
+                attempts++;
+                retryCount.incrementAndGet();
+                
+                if (attempts > actualMaxRetries) {
+                    writeErrorCount.incrementAndGet();
+                    log.error("Failed to write batch after {} attempts: {}", attempts, e.getMessage());
+                    return false;
+                }
+                
+                log.warn("Retry {} writing batch: {}", attempts, e.getMessage());
+                
+                try {
+                    Thread.sleep(retryDelayMs * attempts);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     public List<Map<String, Object>> querySensorData(String deviceCode, String sensorType, 
@@ -179,5 +344,16 @@ public class InfluxDBService {
             log.error("Error getting latest data for device type: {}", e.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    public Map<String, Object> getWriteStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalWrites", writeCount.get());
+        stats.put("totalErrors", writeErrorCount.get());
+        stats.put("totalRetries", retryCount.get());
+        stats.put("errorRate", writeCount.get() > 0 
+                ? String.format("%.2f%%", (double) writeErrorCount.get() / writeCount.get() * 100)
+                : "0.00%");
+        return stats;
     }
 }

@@ -79,10 +79,15 @@ class EdgeGateway:
             logger.info("Interlock manager initialized")
 
             self._subscribe_to_topics()
+            
+            self._register_mqtt_callbacks()
 
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}")
             sys.exit(1)
+
+    def _register_mqtt_callbacks(self) -> None:
+        self.mqtt_client.add_connect_callback(self._on_mqtt_connected)
 
     def _subscribe_to_topics(self) -> None:
         topics = self.config['mqtt'].get('topics', {})
@@ -96,6 +101,14 @@ class EdgeGateway:
             'fertigate/gateway/command',
             self._handle_gateway_command
         )
+
+    def _on_mqtt_connected(self, is_reconnect: bool) -> None:
+        if is_reconnect:
+            logger.info("MQTT reconnected, starting data backfill...")
+            self._backfill_cached_data()
+        else:
+            logger.info("MQTT initial connection complete")
+            self._backfill_cached_data()
 
     def _handle_valve_command(self, payload: Dict[str, Any], topic: str) -> None:
         logger.info(f"Received valve command: {payload}")
@@ -221,6 +234,50 @@ class EdgeGateway:
             
         except Exception as e:
             logger.error(f"Error in data collection: {e}")
+
+    def _backfill_cached_data(self) -> None:
+        if not self.mqtt_client.is_connected():
+            logger.warning("MQTT not connected, cannot backfill cached data")
+            return
+
+        try:
+            total_backfilled = 0
+            batch_size = self.config.get('cache', {}).get('backfill_batch_size', 100)
+            
+            while True:
+                unsynced = self.cache_manager.get_unsynced(limit=batch_size)
+                if not unsynced:
+                    break
+
+                published_keys = []
+                
+                for entry in unsynced:
+                    published = self.mqtt_client.publish_with_timestamp(
+                        self.config['mqtt']['topics'].get('sensor_data', 'fertigate/sensor/data'),
+                        entry['data'],
+                        entry['timestamp']
+                    )
+                    
+                    if published:
+                        published_keys.append(entry['key'])
+
+                if published_keys:
+                    self.cache_manager.mark_synced(published_keys)
+                    total_backfilled += len(published_keys)
+                    logger.info(f"Backfilled {len(published_keys)} entries, total: {total_backfilled}")
+
+                if len(unsynced) < batch_size:
+                    break
+
+            if total_backfilled > 0:
+                logger.info(f"Data backfill completed. Total {total_backfilled} entries backfilled")
+                self.cache_manager.cleanup_synced()
+                self.cache_manager.flush()
+            else:
+                logger.info("No cached data to backfill")
+            
+        except Exception as e:
+            logger.error(f"Error during data backfill: {e}")
 
     def _flush_cache_if_needed(self) -> None:
         if not self.cache_manager.should_flush():

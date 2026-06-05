@@ -3,20 +3,6 @@ gateway:
   name: 边缘网关-主节点
   location: 温室大棚控制箱
 
-mqtt:
-  broker: localhost
-  port: 1883
-  client_id: edge-gateway-001
-  username: admin
-  password: fertigate123
-  keepalive: 60
-  qos: 1
-  topics:
-    sensor_data: fertigate/sensor/data
-    device_status: fertigate/device/status
-    valve_command: fertigate/valve/command
-    alert: fertigate/alert
-
 modbus:
   serial_port: COM3
   baudrate: 9600
@@ -35,6 +21,27 @@ cache:
   db_path: ./data/cache.db
   max_size_mb: 100
   flush_interval_seconds: 10
+  backfill_batch_size: 100
+  max_retry_attempts: 3
+  retry_interval_seconds: 2
+
+mqtt:
+  broker: localhost
+  port: 1883
+  client_id: edge-gateway-001
+  username: admin
+  password: fertigate123
+  keepalive: 60
+  qos: 1
+  reconnect_max_attempts: 10
+  reconnect_base_delay: 2
+  reconnect_max_delay: 30
+  use_tls: false
+  topics:
+    sensor_data: fertigate/sensor/data
+    device_status: fertigate/device/status
+    valve_command: fertigate/valve/command
+    alert: fertigate/alert
 
 interlock:
   enabled: true

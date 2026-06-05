@@ -14,4 +14,7 @@ public class SensorDataDTO {
     private LocalDateTime timestamp;
     private Map<String, Double> values;
     private Boolean interlockSafe;
+    private LocalDateTime originalTimestamp;
+    private Boolean isRetransmission;
+    private String messageId;
 }

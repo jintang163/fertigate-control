@@ -1,7 +1,7 @@
 import logging
 import json
 import time
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Optional, List
 
 import paho.mqtt.client as mqtt
 
@@ -13,7 +13,9 @@ class MqttClient:
         self.config = config
         self.client = None
         self._connected = False
+        self._was_connected = False
         self._message_callbacks = {}
+        self._connect_callbacks: List[Callable[[bool], None]] = []
         self._connect()
 
     def _connect(self) -> None:
@@ -59,11 +61,15 @@ class MqttClient:
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self._connected = True
+            is_reconnect = self._was_connected
+            self._was_connected = True
             logger.info(f"Connected to MQTT broker with result code {rc}")
             
             for topic in self._message_callbacks.keys():
                 self.client.subscribe(topic, qos=self.config.get('qos', 1))
                 logger.info(f"Subscribed to topic: {topic}")
+            
+            self._notify_connect_callbacks(is_reconnect)
         else:
             self._connected = False
             logger.error(f"Failed to connect to MQTT broker with result code {rc}")
@@ -96,6 +102,20 @@ class MqttClient:
 
     def _on_publish(self, client, userdata, mid):
         logger.debug(f"Message published with mid: {mid}")
+
+    def _notify_connect_callbacks(self, is_reconnect: bool) -> None:
+        for callback in self._connect_callbacks:
+            try:
+                callback(is_reconnect)
+            except Exception as e:
+                logger.error(f"Error in connect callback: {e}")
+
+    def add_connect_callback(self, callback: Callable[[bool], None]) -> None:
+        self._connect_callbacks.append(callback)
+
+    def remove_connect_callback(self, callback: Callable[[bool], None]) -> None:
+        if callback in self._connect_callbacks:
+            self._connect_callbacks.remove(callback)
 
     def _topic_matches(self, pattern: str, topic: str) -> bool:
         pattern_parts = pattern.split('/')
@@ -164,6 +184,21 @@ class MqttClient:
         except Exception as e:
             logger.error(f"Error publishing to {topic}: {e}")
             return False
+
+    def publish_batch(self, topic: str, payloads: List[Dict[str, Any]], qos: Optional[int] = None) -> List[bool]:
+        results = []
+        for payload in payloads:
+            results.append(self.publish(topic, payload, qos))
+        return results
+
+    def publish_with_timestamp(self, topic: str, payload: Dict[str, Any], 
+                               original_timestamp: str, qos: Optional[int] = None) -> bool:
+        enriched_payload = {
+            **payload,
+            'original_timestamp': original_timestamp,
+            'is_retransmission': True
+        }
+        return self.publish(topic, enriched_payload, qos)
 
     def subscribe(self, topic: str, callback: Callable[[Dict[str, Any], str], None]) -> None:
         self._message_callbacks[topic] = callback

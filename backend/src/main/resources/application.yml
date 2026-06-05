@@ -35,12 +35,23 @@ influxdb:
   token: fertigate-token-2024
   org: fertigate
   bucket: sensor_data
+  write:
+    retry:
+      max-attempts: 3
+      delay-ms: 1000
 
 mqtt:
   broker: tcp://localhost:1883
   client-id: fertigate-backend
   username: admin
   password: fertigate123
+  reconnect:
+    max-attempts: 10
+    base-delay: 2
+    max-delay: 30
+  deduplication:
+    enabled: true
+    max-size: 10000
   topics:
     sensor-data: fertigate/sensor/data
     device-status: fertigate/device/status
