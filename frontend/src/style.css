@@ -1,0 +1,236 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background-color: #f0f2f5;
+}
+
+.content-wrapper {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+  background-color: #f0f2f5;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.card-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1890ff;
+  line-height: 1.2;
+}
+
+.stat-card .stat-label {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-top: 8px;
+}
+
+.stat-card .stat-icon {
+  font-size: 40px;
+  color: #1890ff;
+}
+
+.online-status {
+  color: #52c41a;
+}
+
+.offline-status {
+  color: #ff4d4f;
+}
+
+.warning-status {
+  color: #faad14;
+}
+
+.gauge-container {
+  width: 100%;
+  height: 250px;
+}
+
+.chart-container {
+  width: 100%;
+  height: 300px;
+}
+
+.large-chart-container {
+  width: 100%;
+  height: 400px;
+}
+
+.sensor-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.sensor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.sensor-card .sensor-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.sensor-card .sensor-unit {
+  font-size: 16px;
+  opacity: 0.8;
+  margin-left: 4px;
+}
+
+.sensor-card .sensor-label {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 8px;
+}
+
+.sensor-card.soil {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.sensor-card.weather {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.sensor-card.valve {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.sensor-card.alert {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.valve-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+.valve-control:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.valve-control .valve-info {
+  flex: 1;
+}
+
+.valve-control .valve-name {
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.valve-control .valve-status {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.valve-control .valve-status.open {
+  color: #52c41a;
+}
+
+.valve-control .valve-status.closed {
+  color: #ff4d4f;
+}
+
+.alert-item {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border-left: 4px solid #faad14;
+  background: #fffbe6;
+}
+
+.alert-item.critical {
+  border-left-color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.alert-item.warning {
+  border-left-color: #faad14;
+  background: #fffbe6;
+}
+
+.alert-item.info {
+  border-left-color: #1890ff;
+  background: #e6f7ff;
+}
+
+.alert-item .alert-title {
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.alert-item .alert-message {
+  font-size: 14px;
+  color: #595959;
+  margin-bottom: 8px;
+}
+
+.alert-item .alert-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+:deep(.ant-layout-sider) {
+  background: #001529 !important;
+}
+
+:deep(.ant-menu-dark) {
+  background: #001529 !important;
+}
+
+:deep(.ant-layout-header) {
+  background: #fff !important;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}

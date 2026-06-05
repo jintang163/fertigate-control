@@ -1,0 +1,132 @@
+gateway:
+  id: GW-001
+  name: 边缘网关-主节点
+  location: 温室大棚控制箱
+
+mqtt:
+  broker: localhost
+  port: 1883
+  client_id: edge-gateway-001
+  username: admin
+  password: fertigate123
+  keepalive: 60
+  qos: 1
+  topics:
+    sensor_data: fertigate/sensor/data
+    device_status: fertigate/device/status
+    valve_command: fertigate/valve/command
+    alert: fertigate/alert
+
+modbus:
+  serial_port: COM3
+  baudrate: 9600
+  bytesize: 8
+  parity: N
+  stopbits: 1
+  timeout: 3
+
+collection:
+  interval_seconds: 30
+  retry_count: 3
+  retry_interval: 1
+
+cache:
+  enabled: true
+  db_path: ./data/cache.db
+  max_size_mb: 100
+  flush_interval_seconds: 10
+
+interlock:
+  enabled: true
+  emergency_pressure: 8.0
+  min_soil_humidity: 30
+  max_soil_humidity: 90
+  max_ec: 5.0
+  min_ph: 4.0
+  max_ph: 9.0
+
+devices:
+  - device_code: SENSOR-SOIL-001
+    name: 土壤传感器-1
+    type: soil
+    modbus_address: 1
+    zone: A区
+    registers:
+      humidity:
+        address: 0
+        count: 2
+        scale: 0.01
+        unit: "%"
+      ec:
+        address: 2
+        count: 2
+        scale: 0.01
+        unit: mS/cm
+      ph:
+        address: 4
+        count: 2
+        scale: 0.01
+        unit: pH
+      temperature:
+        address: 6
+        count: 2
+        scale: 0.1
+        unit: "°C"
+
+  - device_code: SENSOR-WEATHER-001
+    name: 气象站-1
+    type: weather
+    modbus_address: 2
+    zone: A区
+    registers:
+      air_temperature:
+        address: 0
+        count: 2
+        scale: 0.1
+        unit: "°C"
+      air_humidity:
+        address: 2
+        count: 2
+        scale: 0.1
+        unit: "%"
+      light:
+        address: 4
+        count: 2
+        scale: 1
+        unit: Lux
+      rainfall:
+        address: 6
+        count: 2
+        scale: 0.1
+        unit: mm
+      wind_speed:
+        address: 8
+        count: 2
+        scale: 0.1
+        unit: m/s
+
+  - device_code: VALVE-001
+    name: 电磁阀-A区1号
+    type: valve
+    modbus_address: 10
+    zone: A区
+    valve_number: 1
+    control_register:
+      address: 0
+      count: 1
+    status_register:
+      address: 1
+      count: 1
+
+  - device_code: VALVE-002
+    name: 电磁阀-A区2号
+    type: valve
+    modbus_address: 11
+    zone: A区
+    valve_number: 2
+    control_register:
+      address: 0
+      count: 1
+    status_register:
+      address: 1
+      count: 1

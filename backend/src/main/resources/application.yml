@@ -1,0 +1,73 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: fertigate-control
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fertigate
+    username: admin
+    password: fertigate123
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+influxdb:
+  url: http://localhost:8086
+  token: fertigate-token-2024
+  org: fertigate
+  bucket: sensor_data
+
+mqtt:
+  broker: tcp://localhost:1883
+  client-id: fertigate-backend
+  username: admin
+  password: fertigate123
+  topics:
+    sensor-data: fertigate/sensor/data
+    device-status: fertigate/device/status
+    alert: fertigate/alert
+    valve-command: fertigate/valve/command
+    gateway-heartbeat: fertigate/gateway/heartbeat
+    gateway-command: fertigate/gateway/command
+    gateway-response: fertigate/gateway/response
+
+control:
+  default-irrigation-duration: 1800
+  check-interval-seconds: 30
+  mode: auto
+
+logging:
+  level:
+    root: INFO
+    com.fertigate: DEBUG
+    com.hivemq.client: WARN
+  file:
+    name: logs/fertigate-backend.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
