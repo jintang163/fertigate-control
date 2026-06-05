@@ -75,13 +75,34 @@ public class MqttMessageHandler {
 
     @PostConstruct
     public void init() {
+        mqttConfig.addConnectCallback(this::onMqttConnected);
+        subscribeAllTopics();
+    }
+
+    private void onMqttConnected(boolean isReconnect) {
+        if (isReconnect) {
+            log.info("MQTT reconnected, re-subscribing to all topics...");
+        }
+        subscribeAllTopics();
+    }
+
+    private void subscribeAllTopics() {
+        if (!mqttConfig.isConnected()) {
+            log.warn("MQTT not connected, will subscribe when connection is established");
+            return;
+        }
         subscribeToTopic(sensorDataTopic, this::handleSensorData);
         subscribeToTopic(deviceStatusTopic, this::handleDeviceStatus);
         subscribeToTopic(alertTopic, this::handleAlert);
         subscribeToTopic(gatewayHeartbeatTopic, this::handleGatewayHeartbeat);
+        log.info("All MQTT topics subscribed successfully");
     }
 
     private void subscribeToTopic(String topic, java.util.function.Consumer<Mqtt5Publish> handler) {
+        if (!mqttConfig.isConnected()) {
+            log.warn("MQTT not connected, cannot subscribe to topic: {}", topic);
+            return;
+        }
         mqttClient.subscribeWith()
                 .topicFilter(topic)
                 .callback(publish -> {

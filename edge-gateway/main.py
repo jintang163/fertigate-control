@@ -219,14 +219,15 @@ class EdgeGateway:
             for data in data_list:
                 data['interlock_safe'] = interlock_result['is_safe']
                 
-                published = self.mqtt_client.publish(
+                confirmed = self.mqtt_client.publish(
                     self.config['mqtt']['topics'].get('sensor_data', 'fertigate/sensor/data'),
-                    data
+                    data,
+                    wait_confirm=True
                 )
                 
-                if not published:
+                if not confirmed:
                     self.cache_manager.store(data)
-                    logger.debug(f"Cached data for {data['device_code']}")
+                    logger.debug(f"Cached data for {data['device_code']} (no PUBACK confirmation)")
 
             self._flush_cache_if_needed()
             
@@ -249,28 +250,32 @@ class EdgeGateway:
                 if not unsynced:
                     break
 
-                published_keys = []
+                confirmed_keys = []
                 
                 for entry in unsynced:
-                    published = self.mqtt_client.publish_with_timestamp(
+                    original_timestamp = entry['data'].get('timestamp') or entry['timestamp']
+                    
+                    confirmed = self.mqtt_client.publish_with_timestamp(
                         self.config['mqtt']['topics'].get('sensor_data', 'fertigate/sensor/data'),
                         entry['data'],
-                        entry['timestamp']
+                        original_timestamp,
+                        wait_confirm=True,
+                        cache_key=entry['key']
                     )
                     
-                    if published:
-                        published_keys.append(entry['key'])
+                    if confirmed:
+                        confirmed_keys.append(entry['key'])
 
-                if published_keys:
-                    self.cache_manager.mark_synced(published_keys)
-                    total_backfilled += len(published_keys)
-                    logger.info(f"Backfilled {len(published_keys)} entries, total: {total_backfilled}")
+                if confirmed_keys:
+                    self.cache_manager.mark_synced(confirmed_keys)
+                    total_backfilled += len(confirmed_keys)
+                    logger.info(f"Backfilled {len(confirmed_keys)} entries with PUBACK confirmation, total: {total_backfilled}")
 
                 if len(unsynced) < batch_size:
                     break
 
             if total_backfilled > 0:
-                logger.info(f"Data backfill completed. Total {total_backfilled} entries backfilled")
+                logger.info(f"Data backfill completed. Total {total_backfilled} entries backfilled with confirmation")
                 self.cache_manager.cleanup_synced()
                 self.cache_manager.flush()
             else:
@@ -293,20 +298,22 @@ class EdgeGateway:
                 self.cache_manager.flush()
                 return
 
-            published_keys = []
+            confirmed_keys = []
             
             for entry in unsynced:
-                published = self.mqtt_client.publish(
+                confirmed = self.mqtt_client.publish(
                     self.config['mqtt']['topics'].get('sensor_data', 'fertigate/sensor/data'),
-                    entry['data']
+                    entry['data'],
+                    wait_confirm=True,
+                    cache_key=entry['key']
                 )
                 
-                if published:
-                    published_keys.append(entry['key'])
+                if confirmed:
+                    confirmed_keys.append(entry['key'])
 
-            if published_keys:
-                self.cache_manager.mark_synced(published_keys)
-                logger.info(f"Flushed {len(published_keys)} cached entries")
+            if confirmed_keys:
+                self.cache_manager.mark_synced(confirmed_keys)
+                logger.info(f"Flushed {len(confirmed_keys)} cached entries with PUBACK confirmation")
 
             self.cache_manager.cleanup_synced()
             self.cache_manager.flush()

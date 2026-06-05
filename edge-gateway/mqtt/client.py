@@ -1,7 +1,9 @@
 import logging
 import json
 import time
-from typing import Dict, Any, Callable, Optional, List
+from typing import Dict, Any, Callable, Optional, List, Tuple
+from threading import Lock, Event
+from collections import deque
 
 import paho.mqtt.client as mqtt
 
@@ -16,6 +18,11 @@ class MqttClient:
         self._was_connected = False
         self._message_callbacks = {}
         self._connect_callbacks: List[Callable[[bool], None]] = []
+        
+        self._pending_messages: Dict[int, Tuple[str, str, Event]] = {}
+        self._pending_lock = Lock()
+        self._puback_timeout = config.get('puback_timeout', 5)
+        
         self._connect()
 
     def _connect(self) -> None:
@@ -102,6 +109,12 @@ class MqttClient:
 
     def _on_publish(self, client, userdata, mid):
         logger.debug(f"Message published with mid: {mid}")
+        
+        with self._pending_lock:
+            if mid in self._pending_messages:
+                topic, key, event = self._pending_messages.pop(mid)
+                logger.debug(f"PUBACK received for mid {mid}, topic {topic}, key {key}")
+                event.set()
 
     def _notify_connect_callbacks(self, is_reconnect: bool) -> None:
         for callback in self._connect_callbacks:
@@ -162,43 +175,74 @@ class MqttClient:
     def is_connected(self) -> bool:
         return self._connected and self.client is not None
 
-    def publish(self, topic: str, payload: Dict[str, Any], qos: Optional[int] = None) -> bool:
+    def publish(self, topic: str, payload: Dict[str, Any], qos: Optional[int] = None,
+                wait_confirm: bool = False, cache_key: Optional[str] = None) -> bool:
         if not self.is_connected():
             logger.warning(f"MQTT not connected. Cannot publish to {topic}")
             return False
         
         try:
+            actual_qos = qos if qos is not None else self.config.get('qos', 1)
+            
+            if wait_confirm and actual_qos < 1:
+                logger.warning(f"QoS must be >= 1 for PUBACK confirmation, using QoS 1")
+                actual_qos = 1
+            
             payload_json = json.dumps(payload, ensure_ascii=False)
             msg_info = self.client.publish(
                 topic=topic,
                 payload=payload_json,
-                qos=qos if qos is not None else self.config.get('qos', 1)
+                qos=actual_qos
             )
             
-            if msg_info.rc == mqtt.MQTT_ERR_SUCCESS:
-                logger.debug(f"Published to {topic} successfully")
-                return True
-            else:
+            if msg_info.rc != mqtt.MQTT_ERR_SUCCESS:
                 logger.error(f"Failed to publish to {topic}: {msg_info.rc}")
                 return False
+            
+            if wait_confirm and actual_qos >= 1:
+                return self._wait_for_puback(msg_info.mid, topic, cache_key)
+            
+            logger.debug(f"Published to {topic} successfully (mid: {msg_info.mid})")
+            return True
+            
         except Exception as e:
             logger.error(f"Error publishing to {topic}: {e}")
             return False
 
-    def publish_batch(self, topic: str, payloads: List[Dict[str, Any]], qos: Optional[int] = None) -> List[bool]:
+    def _wait_for_puback(self, mid: int, topic: str, cache_key: Optional[str] = None) -> bool:
+        event = Event()
+        
+        with self._pending_lock:
+            self._pending_messages[mid] = (topic, cache_key or '', event)
+        
+        logger.debug(f"Waiting for PUBACK for mid {mid}, timeout {self._puback_timeout}s")
+        
+        if event.wait(timeout=self._puback_timeout):
+            logger.debug(f"PUBACK confirmed for mid {mid}")
+            return True
+        else:
+            with self._pending_lock:
+                if mid in self._pending_messages:
+                    self._pending_messages.pop(mid)
+            logger.warning(f"PUBACK timeout for mid {mid} after {self._puback_timeout}s")
+            return False
+
+    def publish_batch(self, topic: str, payloads: List[Dict[str, Any]], 
+                      qos: Optional[int] = None, wait_confirm: bool = False) -> List[bool]:
         results = []
         for payload in payloads:
-            results.append(self.publish(topic, payload, qos))
+            results.append(self.publish(topic, payload, qos, wait_confirm))
         return results
 
     def publish_with_timestamp(self, topic: str, payload: Dict[str, Any], 
-                               original_timestamp: str, qos: Optional[int] = None) -> bool:
+                               original_timestamp: str, qos: Optional[int] = None,
+                               wait_confirm: bool = False, cache_key: Optional[str] = None) -> bool:
         enriched_payload = {
             **payload,
             'original_timestamp': original_timestamp,
             'is_retransmission': True
         }
-        return self.publish(topic, enriched_payload, qos)
+        return self.publish(topic, enriched_payload, qos, wait_confirm, cache_key)
 
     def subscribe(self, topic: str, callback: Callable[[Dict[str, Any], str], None]) -> None:
         self._message_callbacks[topic] = callback

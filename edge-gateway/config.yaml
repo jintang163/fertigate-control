@@ -33,6 +33,7 @@ mqtt:
   password: fertigate123
   keepalive: 60
   qos: 1
+  puback_timeout: 5
   reconnect_max_attempts: 10
   reconnect_base_delay: 2
   reconnect_max_delay: 30

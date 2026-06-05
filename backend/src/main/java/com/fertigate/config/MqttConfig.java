@@ -12,11 +12,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 
 
@@ -36,18 +39,6 @@ public class MqttConfig {
     @Value("${mqtt.password}")
     private String password;
 
-    @Value("${mqtt.topics.sensor-data}")
-    private String sensorDataTopic;
-
-    @Value("${mqtt.topics.device-status}")
-    private String deviceStatusTopic;
-
-    @Value("${mqtt.topics.alert}")
-    private String alertTopic;
-
-    @Value("${mqtt.topics.gateway-heartbeat}")
-    private String gatewayHeartbeatTopic;
-
     @Value("${mqtt.reconnect.max-attempts:10}")
     private int maxReconnectAttempts;
 
@@ -62,6 +53,8 @@ public class MqttConfig {
     private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private final ScheduledExecutorService reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
     private final AtomicBoolean wasConnected = new AtomicBoolean(false);
+    
+    private final List<Consumer<Boolean>> connectCallbacks = new ArrayList<>();
 
     @Bean
     public Mqtt5AsyncClient mqttClient() {
@@ -115,7 +108,7 @@ public class MqttConfig {
                     isReconnecting.set(false);
                     reconnectAttempts.set(0);
                     wasConnected.set(true);
-                    subscribeToTopics();
+                    notifyConnectCallbacks(true);
                 } else {
                     log.error("MQTT reconnection failed: {}", connAck.getReasonCode());
                     scheduleReconnect();
@@ -143,7 +136,7 @@ public class MqttConfig {
             if (connAck.getReasonCode().isSuccess()) {
                 log.info("Connected to MQTT broker successfully");
                 wasConnected.set(true);
-                subscribeToTopics();
+                notifyConnectCallbacks(false);
             } else {
                 log.error("Failed to connect to MQTT broker: {}", connAck.getReasonCode());
                 scheduleReconnect();
@@ -154,28 +147,22 @@ public class MqttConfig {
         }
     }
 
-    private void subscribeToTopics() {
-        subscribe(sensorDataTopic);
-        subscribe(deviceStatusTopic);
-        subscribe(alertTopic);
-        subscribe(gatewayHeartbeatTopic);
+    private void notifyConnectCallbacks(boolean isReconnect) {
+        for (Consumer<Boolean> callback : connectCallbacks) {
+            try {
+                callback.accept(isReconnect);
+            } catch (Exception e) {
+                log.error("Error in MQTT connect callback: {}", e.getMessage(), e);
+            }
+        }
     }
 
-    private void subscribe(String topic) {
-        client.subscribeWith()
-                .topicFilter(topic)
-                .callback(publish -> {
-                    String payload = new String(publish.getPayloadAsBytes());
-                    log.debug("Received message on topic {}: {}", topic, payload);
-                })
-                .send()
-                .whenComplete((subAck, throwable) -> {
-                    if (throwable != null) {
-                        log.error("Failed to subscribe to topic {}: {}", topic, throwable.getMessage());
-                    } else {
-                        log.info("Subscribed to topic: {}", topic);
-                    }
-                });
+    public void addConnectCallback(Consumer<Boolean> callback) {
+        connectCallbacks.add(callback);
+    }
+
+    public void removeConnectCallback(Consumer<Boolean> callback) {
+        connectCallbacks.remove(callback);
     }
 
     public void publish(String topic, Object message) {
