@@ -161,7 +161,7 @@ class InterlockManager:
         for sensor_data in sensor_data_list:
             device_type = sensor_data.get('device_type', '')
             
-            if device_type in ['soil', 'weather']:
+            if device_type == 'soil':
                 is_safe, alerts = self.check_sensor_thresholds(sensor_data)
                 if not is_safe:
                     result['is_safe'] = False
@@ -178,6 +178,20 @@ class InterlockManager:
                         if not self.emergency_stop:
                             valve_cmds = self._create_valve_commands(zone, True, alert['message'])
                             result['valve_commands'].extend(valve_cmds)
+            
+            elif device_type == 'weather':
+                is_safe, alerts = self.check_weather_conditions(sensor_data)
+                if not is_safe:
+                    result['is_safe'] = False
+                result['alerts'].extend(alerts)
+
+                for alert in alerts:
+                    action = alert.get('action')
+                    zone = sensor_data.get('zone', '')
+                    
+                    if action == 'stop_irrigation':
+                        valve_cmds = self._create_valve_commands(zone, False, alert['message'])
+                        result['valve_commands'].extend(valve_cmds)
 
         return result
 
