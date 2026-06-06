@@ -1,0 +1,20 @@
+﻿python : Traceback (most recent call last):
+所在位置 行:1 字符: 99
++ ... te-control\growth-model-service ; python test_imports.py 2>&1 | Out-F ...
++                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteEx 
+   ception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "D:\02.develop\01.workspace\01.java\2019.bc\ai\018.fertigate-control\growth-model-service\test
+_imports.py", line 8, in <module>
+    from models import CropVariety, GrowthStageConfig, WaterRequirementPoint
+  File "D:\02.develop\01.workspace\01.java\2019.bc\ai\018.fertigate-control\growth-model-service\mode
+ls\__init__.py", line 1, in <module>
+    from .growth_stage import GrowthStage, CropVariety, GrowthStageConfig
+  File "D:\02.develop\01.workspace\01.java\2019.bc\ai\018.fertigate-control\growth-model-service\mode
+ls\growth_stage.py", line 4, in <module>
+    from pydantic import BaseModel, Field
+ModuleNotFoundError: No module named 'pydantic'
+=== Testing Module Imports ===
+ERROR - models import failed: No module named 'pydantic'

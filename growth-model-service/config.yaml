@@ -1,0 +1,199 @@
+service:
+  name: growth-model-service
+  host: 0.0.0.0
+  port: 8081
+  log_level: INFO
+
+spring_boot:
+  base_url: http://localhost:8080/api
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 2
+
+decision:
+  check_interval_seconds: 60
+  default_irrigation_duration: 1800
+  min_irrigation_duration: 300
+  max_irrigation_duration: 7200
+  flow_rate_lpm: 10
+  enable_auto_callback: true
+
+crops:
+  default:
+    tomato:
+      variety: "普通番茄"
+      total_growth_days: 120
+      growth_stages:
+        seedling:
+          name: "苗期"
+          duration_days: 25
+          min_humidity: 50.0
+          max_humidity: 65.0
+          optimal_ec: 1.5
+          optimal_ph: 6.2
+          water_requirement: 2.0
+          n_ratio: 3.0
+          p_ratio: 1.0
+          k_ratio: 2.0
+        vegetative:
+          name: "营养生长期"
+          duration_days: 30
+          min_humidity: 55.0
+          max_humidity: 75.0
+          optimal_ec: 1.8
+          optimal_ph: 6.0
+          water_requirement: 4.0
+          n_ratio: 2.5
+          p_ratio: 1.0
+          k_ratio: 2.5
+        flowering:
+          name: "开花期"
+          duration_days: 25
+          min_humidity: 60.0
+          max_humidity: 80.0
+          optimal_ec: 2.0
+          optimal_ph: 5.8
+          water_requirement: 5.0
+          n_ratio: 1.5
+          p_ratio: 1.5
+          k_ratio: 3.0
+        fruiting:
+          name: "结果期"
+          duration_days: 30
+          min_humidity: 65.0
+          max_humidity: 85.0
+          optimal_ec: 2.2
+          optimal_ph: 5.8
+          water_requirement: 6.0
+          n_ratio: 1.0
+          p_ratio: 1.5
+          k_ratio: 4.0
+        ripening:
+          name: "成熟期"
+          duration_days: 10
+          min_humidity: 50.0
+          max_humidity: 70.0
+          optimal_ec: 1.8
+          optimal_ph: 6.0
+          water_requirement: 3.0
+          n_ratio: 0.5
+          p_ratio: 1.0
+          k_ratio: 3.0
+    cucumber:
+      variety: "普通黄瓜"
+      total_growth_days: 90
+      growth_stages:
+        seedling:
+          name: "苗期"
+          duration_days: 20
+          min_humidity: 55.0
+          max_humidity: 70.0
+          optimal_ec: 1.4
+          optimal_ph: 6.0
+          water_requirement: 2.5
+          n_ratio: 3.0
+          p_ratio: 1.0
+          k_ratio: 2.5
+        vegetative:
+          name: "营养生长期"
+          duration_days: 25
+          min_humidity: 60.0
+          max_humidity: 80.0
+          optimal_ec: 1.8
+          optimal_ph: 5.8
+          water_requirement: 5.0
+          n_ratio: 2.0
+          p_ratio: 1.0
+          k_ratio: 3.0
+        flowering:
+          name: "开花期"
+          duration_days: 20
+          min_humidity: 65.0
+          max_humidity: 85.0
+          optimal_ec: 2.0
+          optimal_ph: 5.6
+          water_requirement: 6.0
+          n_ratio: 1.5
+          p_ratio: 1.5
+          k_ratio: 3.5
+        fruiting:
+          name: "结果期"
+          duration_days: 25
+          min_humidity: 70.0
+          max_humidity: 90.0
+          optimal_ec: 2.2
+          optimal_ph: 5.6
+          water_requirement: 7.0
+          n_ratio: 1.0
+          p_ratio: 1.5
+          k_ratio: 4.0
+    wheat:
+      variety: "冬小麦"
+      total_growth_days: 240
+      growth_stages:
+        seedling:
+          name: "苗期"
+          duration_days: 40
+          min_humidity: 60.0
+          max_humidity: 75.0
+          optimal_ec: 1.2
+          optimal_ph: 6.5
+          water_requirement: 1.5
+          n_ratio: 3.0
+          p_ratio: 1.0
+          k_ratio: 2.0
+        tillering:
+          name: "分蘖期"
+          duration_days: 50
+          min_humidity: 65.0
+          max_humidity: 80.0
+          optimal_ec: 1.4
+          optimal_ph: 6.5
+          water_requirement: 2.5
+          n_ratio: 2.5
+          p_ratio: 1.5
+          k_ratio: 2.5
+        jointing:
+          name: "拔节期"
+          duration_days: 40
+          min_humidity: 70.0
+          max_humidity: 85.0
+          optimal_ec: 1.6
+          optimal_ph: 6.3
+          water_requirement: 4.0
+          n_ratio: 2.0
+          p_ratio: 1.5
+          k_ratio: 3.0
+        heading:
+          name: "抽穗期"
+          duration_days: 35
+          min_humidity: 70.0
+          max_humidity: 85.0
+          optimal_ec: 1.8
+          optimal_ph: 6.3
+          water_requirement: 5.0
+          n_ratio: 1.5
+          p_ratio: 2.0
+          k_ratio: 3.5
+        filling:
+          name: "灌浆期"
+          duration_days: 45
+          min_humidity: 65.0
+          max_humidity: 80.0
+          optimal_ec: 1.6
+          optimal_ph: 6.5
+          water_requirement: 4.0
+          n_ratio: 1.0
+          p_ratio: 2.0
+          k_ratio: 4.0
+        ripening:
+          name: "成熟期"
+          duration_days: 30
+          min_humidity: 50.0
+          max_humidity: 65.0
+          optimal_ec: 1.2
+          optimal_ph: 6.8
+          water_requirement: 1.0
+          n_ratio: 0.5
+          p_ratio: 1.5
+          k_ratio: 3.0

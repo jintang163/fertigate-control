@@ -1,0 +1,61 @@
+﻿=== Testing Core Logic (No External Dependencies) ===
+
+1. Testing Sigmoid Curve Calculation:
+   Day 0/25: factor = 0.728
+   Day 5/25: factor = 0.785
+   Day 10/25: factor = 0.913
+   Day 15/25: factor = 1.087
+   Day 20/25: factor = 1.215
+   Day 25/25: factor = 1.272
+
+2. Testing Water Deficit Calculation:
+   Current: 45.0%, Min: 55.0%, Max: 75.0%
+   Stage: flowering, factor: 1.0
+   Adjusted: [55.0%, 75.0%]
+   Water Deficit: 10.0%
+
+3. Testing Weather Factor Calculation:
+   Weather Factor: 1.100
+
+4. Testing Irrigation Duration Calculation:
+   Water Deficit: 10.0%, Requirement: 5.0mm
+   Area: 100 m2, Flow Rate: 10 L/min
+   Duration: 7200 seconds (120 minutes)
+   Water Amount: 1200.0 liters
+
+5. Testing EC Factor Calculation:
+   Current EC: 1.2, Optimal EC: 1.8
+   EC Factor: 1.20
+
+6. Testing pH Factor Calculation:
+   Current pH: 6.0, Optimal pH: 5.8
+   pH Factor: 1.00
+
+7. Testing Fertilizer Amount Calculation:
+   N:P:K ratio = 1.5:1.5:3.0
+   Area: 0.01 ha, Combined Factor: 1.20
+   N: 0.007 kg, P: 0.007 kg, K: 0.015 kg, Total: 0.029 kg
+
+8. Testing Decision Logic:
+   Current Humidity: 45.0%
+   Adjusted Range: [55.0%, 75.0%]
+   Action: open, Need Irrigation: True
+   Reason: Humidity (45.0%) below threshold (55.0%), deficit: 10.0%
+
+   Current EC: 1.2, Optimal: 1.8
+   EC Range: [1.26, 2.34]
+   Action: fertilize, Need Fertilizer: True
+   Reason: EC (1.20) below min (1.26), deficit: 0.06
+
+=== All Logic Tests Passed! ===
+
+Summary:
+  - Sigmoid curve interpolation working correctly
+  - Water deficit calculation with stage factor adjustment
+  - Weather factor calculation (temp, rain, light, wind)
+  - Irrigation duration and water amount calculation
+  - EC and pH factor calculation for fertilizer adjustment
+  - Fertilizer amount calculation with N:P:K ratio
+  - Decision logic for irrigation and fertilizer
+
+All core algorithms verified successfully!
