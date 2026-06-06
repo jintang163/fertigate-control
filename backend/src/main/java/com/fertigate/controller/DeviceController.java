@@ -16,6 +16,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * 设备管理API控制器
+ * 提供设备管理相关的REST接口，包括：
+ * - 设备CRUD管理
+ * - 设备状态监控（在线/离线）
+ * - 设备统计信息
+ * - 安全联锁管理
+ * - 电磁阀管理
+ * 所有接口前缀：/device
+ */
 @RestController
 @RequestMapping("/device")
 @RequiredArgsConstructor

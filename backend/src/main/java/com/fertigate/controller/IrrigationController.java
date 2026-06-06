@@ -18,6 +18,15 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * 灌溉控制API控制器
+ * 提供灌溉控制相关的REST接口，包括：
+ * - 手动/自动模式切换
+ * - 阀门手动控制（支持开度调节）
+ * - 紧急停止
+ * - 控制系统状态查询
+ * 所有接口前缀：/irrigation
+ */
 @RestController
 @RequestMapping("/irrigation")
 @RequiredArgsConstructor
