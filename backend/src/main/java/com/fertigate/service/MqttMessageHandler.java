@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -53,8 +54,14 @@ public class MqttMessageHandler {
     @Value("${mqtt.topics.gateway-heartbeat}")
     private String gatewayHeartbeatTopic;
 
+    @Value("${mqtt.topics.interlock-alert}")
+    private String interlockAlertTopic;
+
     @Value("${mqtt.deduplication.enabled:true}")
     private boolean deduplicationEnabled;
+
+    private final DeviceMonitoringService deviceMonitoringService;
+    private final SafetyInterlockService safetyInterlockService;
 
     @Value("${mqtt.deduplication.max-size:10000}")
     private int deduplicationMaxSize;
@@ -95,6 +102,7 @@ public class MqttMessageHandler {
         subscribeToTopic(deviceStatusTopic, this::handleDeviceStatus);
         subscribeToTopic(alertTopic, this::handleAlert);
         subscribeToTopic(gatewayHeartbeatTopic, this::handleGatewayHeartbeat);
+        subscribeToTopic(interlockAlertTopic, this::handleInterlockAlert);
         log.info("All MQTT topics subscribed successfully");
     }
 
@@ -454,6 +462,52 @@ public class MqttMessageHandler {
 
     private void incrementCounter(String topic) {
         topicCounters.computeIfAbsent(topic, k -> new AtomicLong(0)).incrementAndGet();
+    }
+
+    private void handleInterlockAlert(Mqtt5Publish publish) {
+        try {
+            String payload = new String(publish.getPayloadAsBytes());
+            log.warn("Received interlock alert: {}", payload);
+
+            JsonNode rootNode = objectMapper.readTree(payload);
+            String interlockType = getTextValue(rootNode, "interlockType", "type");
+            String level = getTextValue(rootNode, "level");
+            String message = getTextValue(rootNode, "message");
+            String deviceCode = getTextValue(rootNode, "deviceCode", "device_code");
+
+            if (safetyInterlockService != null) {
+                Device device = null;
+                if (deviceCode != null) {
+                    Optional<Device> deviceOpt = deviceRepository.findByDeviceCode(deviceCode);
+                    if (deviceOpt.isPresent()) {
+                        device = deviceOpt.get();
+                    }
+                }
+
+                String sensorValue = getTextValue(rootNode, "sensorValue", "sensor_value");
+                String thresholdValue = getTextValue(rootNode, "thresholdValue", "threshold_value");
+                boolean autoStop = rootNode.has("autoStopped") ? rootNode.get("autoStopped").asBoolean() : true;
+
+                String interlockKey = interlockType + "_" + (deviceCode != null ? deviceCode : UUID.randomUUID());
+                safetyInterlockService.triggerInterlock(
+                        interlockKey,
+                        interlockType != null ? interlockType : "unknown",
+                        level != null ? level : "warning",
+                        message != null ? message : "安全联锁告警",
+                        device,
+                        sensorValue,
+                        thresholdValue,
+                        autoStop
+                );
+            }
+
+            if (deviceMonitoringService != null && deviceCode != null) {
+                deviceMonitoringService.updateDeviceHeartbeat(deviceCode);
+            }
+
+        } catch (Exception e) {
+            log.error("Error handling interlock alert: {}", e.getMessage(), e);
+        }
     }
 
     private void incrementError(String topic) {

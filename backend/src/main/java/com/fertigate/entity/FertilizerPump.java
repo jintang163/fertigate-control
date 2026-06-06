@@ -10,8 +10,8 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "valves")
-public class Valve {
+@Table(name = "fertilizer_pumps")
+public class FertilizerPump {
 
     @Id
     @UuidGenerator
@@ -26,20 +26,26 @@ public class Valve {
     @JoinColumn(name = "zone_id")
     private Zone zone;
 
-    @Column(name = "valve_number")
-    private Integer valveNumber;
+    @Column(name = "pump_number")
+    private Integer pumpNumber;
 
     @Column(name = "flow_rate", precision = 8, scale = 2)
     private BigDecimal flowRate = new BigDecimal("0.00");
 
-    @Column(name = "is_open")
-    private Boolean isOpen = false;
+    @Column(name = "max_pressure", precision = 8, scale = 2)
+    private BigDecimal maxPressure = new BigDecimal("10.00");
+
+    @Column(name = "current_pressure", precision = 8, scale = 2)
+    private BigDecimal currentPressure = new BigDecimal("0.00");
+
+    @Column(name = "is_running")
+    private Boolean isRunning = false;
 
     @Column(name = "auto_control")
     private Boolean autoControl = true;
 
     @Column(name = "opening_degree")
-    private Integer openingDegree = 100;
+    private Integer openingDegree = 0;
 
     @Column(name = "last_operation")
     private LocalDateTime lastOperation;

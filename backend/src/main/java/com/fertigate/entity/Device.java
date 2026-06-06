@@ -53,10 +53,19 @@ public class Device {
         updatedAt = LocalDateTime.now();
     }
 
+    @Column(name = "current_value", precision = 10, scale = 2)
+    private java.math.BigDecimal currentValue;
+
+    @Column(length = 20)
+    private String unit;
+
     public enum DeviceType {
         SOIL_SENSOR("soil"),
         WEATHER_SENSOR("weather"),
         VALVE("valve"),
+        FERTILIZER_PUMP("fertilizer_pump"),
+        FLOW_SENSOR("flow_sensor"),
+        PRESSURE_SENSOR("pressure_sensor"),
         GATEWAY("gateway");
 
         private final String value;

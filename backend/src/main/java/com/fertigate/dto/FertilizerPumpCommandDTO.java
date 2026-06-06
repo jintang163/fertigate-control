@@ -4,9 +4,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ValveCommandDTO {
+public class FertilizerPumpCommandDTO {
     private String deviceCode;
-    private Boolean open;
+    private Boolean run;
     private Integer openingDegree;
     private String reason;
     private String zone;

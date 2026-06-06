@@ -146,9 +146,112 @@ VALUES
 ('emergency_stop', 'false', '紧急停止状态'),
 ('default_irrigation_duration', '1800', '默认灌溉时长(秒)');
 
+-- 施肥泵表
+CREATE TABLE fertilizer_pumps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+    zone_id UUID REFERENCES zones(id),
+    pump_number INTEGER,
+    flow_rate DECIMAL(8,2) DEFAULT 0.00,
+    max_pressure DECIMAL(8,2) DEFAULT 10.00,
+    current_pressure DECIMAL(8,2) DEFAULT 0.00,
+    is_running BOOLEAN DEFAULT FALSE,
+    auto_control BOOLEAN DEFAULT TRUE,
+    opening_degree INTEGER DEFAULT 0,
+    last_operation TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 生育期记录表
+CREATE TABLE growth_stage_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    crop_id UUID REFERENCES crops(id) ON DELETE CASCADE,
+    zone_id UUID REFERENCES zones(id),
+    growth_stage VARCHAR(50) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    notes TEXT,
+    min_humidity DECIMAL(5,2),
+    max_humidity DECIMAL(5,2),
+    optimal_ec DECIMAL(5,2),
+    optimal_ph DECIMAL(5,2),
+    water_requirement DECIMAL(8,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 阈值策略表
+CREATE TABLE threshold_strategies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    zone_id UUID REFERENCES zones(id),
+    crop_id UUID REFERENCES crops(id),
+    min_humidity DECIMAL(5,2) NOT NULL DEFAULT 50.00,
+    max_humidity DECIMAL(5,2) NOT NULL DEFAULT 80.00,
+    min_ec DECIMAL(5,2) DEFAULT 1.00,
+    max_ec DECIMAL(5,2) DEFAULT 2.50,
+    min_ph DECIMAL(5,2) DEFAULT 5.50,
+    max_ph DECIMAL(5,2) DEFAULT 7.50,
+    min_temperature DECIMAL(5,2) DEFAULT 10.00,
+    max_temperature DECIMAL(5,2) DEFAULT 35.00,
+    max_wind_speed DECIMAL(5,2) DEFAULT 15.00,
+    min_rainfall DECIMAL(5,2) DEFAULT 0.00,
+    weather_link_enabled BOOLEAN DEFAULT FALSE,
+    avoid_rain_irrigation BOOLEAN DEFAULT TRUE,
+    high_temp_irrigation BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    priority INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 轮灌调度表
+CREATE TABLE rotation_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    strategy_id UUID REFERENCES threshold_strategies(id),
+    zone_ids TEXT,
+    start_time TIME NOT NULL,
+    end_time TIME,
+    duration INTEGER NOT NULL,
+    interval_hours INTEGER DEFAULT 24,
+    priority INTEGER DEFAULT 0,
+    water_amount DECIMAL(8,2),
+    fertilizer_amount DECIMAL(8,2),
+    irrigation_type VARCHAR(20) DEFAULT 'irrigation',
+    is_active BOOLEAN DEFAULT TRUE,
+    last_execution TIMESTAMP,
+    next_execution TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 扩展阀门表，添加开度字段
+ALTER TABLE valves ADD COLUMN IF NOT EXISTS opening_degree INTEGER DEFAULT 100;
+
+-- 扩展灌溉记录表，支持施肥记录和执行方式
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(20) DEFAULT 'auto';
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS irrigation_type VARCHAR(20) DEFAULT 'irrigation';
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS fertilizer_amount DECIMAL(8,2) DEFAULT 0.00;
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS fertilizer_type VARCHAR(50);
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS average_ec DECIMAL(5,2);
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS average_ph DECIMAL(5,2);
+ALTER TABLE irrigation_records ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed';
+
+-- 扩展设备表，添加更多状态字段
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS current_value DECIMAL(10,2);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS unit VARCHAR(20);
+
 -- 创建索引
 CREATE INDEX idx_devices_zone ON devices(zone_id);
 CREATE INDEX idx_sensor_configs_device ON sensor_configs(device_id);
 CREATE INDEX idx_valves_zone ON valves(zone_id);
 CREATE INDEX idx_irrigation_records_time ON irrigation_records(start_time);
 CREATE INDEX idx_alerts_created ON alerts(created_at);
+CREATE INDEX idx_fertilizer_pumps_zone ON fertilizer_pumps(zone_id);
+CREATE INDEX idx_growth_stage_records_crop ON growth_stage_records(crop_id);
+CREATE INDEX idx_threshold_strategies_zone ON threshold_strategies(zone_id);
+CREATE INDEX idx_rotation_schedules_time ON rotation_schedules(next_execution);

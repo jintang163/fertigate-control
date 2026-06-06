@@ -57,14 +57,24 @@ mqtt:
     device-status: fertigate/device/status
     alert: fertigate/alert
     valve-command: fertigate/valve/command
+    fertilizer-pump-command: fertigate/pump/command
     gateway-heartbeat: fertigate/gateway/heartbeat
     gateway-command: fertigate/gateway/command
     gateway-response: fertigate/gateway/response
+    interlock-alert: fertigate/interlock/alert
 
 control:
   default-irrigation-duration: 1800
   check-interval-seconds: 30
   mode: auto
+  device-offline-timeout-seconds: 180
+  safety-interlock:
+    enabled: true
+    check-interval-seconds: 10
+    low-flow-threshold: 0.5
+    low-pressure-threshold: 0.3
+    max-overload-threshold: 10.0
+    communication-timeout-seconds: 60
 
 logging:
   level:

@@ -22,4 +22,7 @@ public interface ValveRepository extends JpaRepository<Valve, UUID> {
     List<Valve> findAutoControlledValvesByZoneId(UUID zoneId);
     
     List<Valve> findByIsOpenTrue();
+
+    @Query("SELECT v FROM Valve v WHERE v.zone.id = :zoneId AND v.isOpen = true")
+    List<Valve> findOpenValvesByZoneId(UUID zoneId);
 }

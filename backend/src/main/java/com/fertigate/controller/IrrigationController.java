@@ -69,6 +69,27 @@ public class IrrigationController {
         }
     }
 
+    @PostMapping("/valve/{valveId}/control-with-degree")
+    public ResponseEntity<Map<String, Object>> controlValveWithDegree(
+            @PathVariable UUID valveId,
+            @RequestParam boolean open,
+            @RequestParam(defaultValue = "手动操作") String reason,
+            @RequestParam(required = false) Integer openingDegree) {
+        
+        boolean success = irrigationControlService.manualControlValveWithDegree(valveId, open, reason, openingDegree);
+        if (success) {
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "valveId", valveId,
+                    "open", open,
+                    "reason", reason,
+                    "openingDegree", openingDegree != null ? openingDegree : 100
+            ));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/decision/{zoneId}")
     public ResponseEntity<IrrigationDecision> getIrrigationDecision(@PathVariable UUID zoneId) {
         return zoneRepository.findById(zoneId)

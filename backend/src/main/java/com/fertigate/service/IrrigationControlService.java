@@ -30,6 +30,8 @@ public class IrrigationControlService {
     private final CropGrowthModelService cropGrowthModelService;
     private final InfluxDBService influxDBService;
     private final MqttConfig mqttConfig;
+    private final FertilizerPumpRepository fertilizerPumpRepository;
+    private final ThresholdStrategyService thresholdStrategyService;
 
     @Value("${control.mode:auto}")
     private String controlMode;
@@ -37,7 +39,11 @@ public class IrrigationControlService {
     @Value("${mqtt.topics.valve-command}")
     private String valveCommandTopic;
 
+    @Value("${mqtt.topics.fertilizer-pump-command}")
+    private String fertilizerPumpCommandTopic;
+
     private final Map<UUID, LocalDateTime> valveScheduledStop = new ConcurrentHashMap<>();
+    private final Map<UUID, LocalDateTime> pumpScheduledStop = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Double>> latestSensorData = new ConcurrentHashMap<>();
 
     @Scheduled(fixedDelayString = "${control.check-interval-seconds:30}000")
@@ -190,6 +196,7 @@ public class IrrigationControlService {
                         irrigationRecordRepository.findActiveRecordByValveId(valveId)
                                 .ifPresent(record -> {
                                     record.setEndTime(now);
+                                    record.setStatus("completed");
                                     irrigationRecordRepository.save(record);
                                 });
                     }
@@ -197,9 +204,25 @@ public class IrrigationControlService {
                 valveScheduledStop.remove(valveId);
             }
         }
+
+        for (Map.Entry<UUID, LocalDateTime> entry : pumpScheduledStop.entrySet()) {
+            if (now.isAfter(entry.getValue())) {
+                UUID pumpId = entry.getKey();
+                fertilizerPumpRepository.findById(pumpId).ifPresent(pump -> {
+                    if (Boolean.TRUE.equals(pump.getIsRunning())) {
+                        stopFertilizerPump(pump, "自动施肥时长结束");
+                    }
+                });
+                pumpScheduledStop.remove(pumpId);
+            }
+        }
     }
 
     public void openValve(Valve valve, String reason) {
+        openValveWithDegree(valve, reason, valve.getOpeningDegree() != null ? valve.getOpeningDegree() : 100);
+    }
+
+    public void openValveWithDegree(Valve valve, String reason, Integer openingDegree) {
         Device device = valve.getDevice();
         if (device == null) {
             log.error("Valve {} has no associated device", valve.getId());
@@ -209,6 +232,7 @@ public class IrrigationControlService {
         ValveCommandDTO command = new ValveCommandDTO();
         command.setDeviceCode(device.getDeviceCode());
         command.setOpen(true);
+        command.setOpeningDegree(openingDegree != null ? openingDegree : 100);
         command.setReason(reason);
         command.setZone(valve.getZone() != null ? valve.getZone().getName() : "");
         command.setTimestamp(LocalDateTime.now());
@@ -216,10 +240,12 @@ public class IrrigationControlService {
         mqttConfig.publish(valveCommandTopic, command);
         
         valve.setIsOpen(true);
+        valve.setOpeningDegree(openingDegree != null ? openingDegree : 100);
         valve.setLastOperation(LocalDateTime.now());
         valveRepository.save(valve);
         
-        log.info("Sent open command to valve {} ({})", valve.getId(), device.getDeviceCode());
+        log.info("Sent open command to valve {} ({}) with opening degree {}%", 
+                valve.getId(), device.getDeviceCode(), openingDegree);
     }
 
     public void closeValve(Valve valve, String reason) {
@@ -247,10 +273,17 @@ public class IrrigationControlService {
 
     @Transactional
     public boolean manualControlValve(UUID valveId, boolean open, String reason) {
+        return manualControlValveWithDegree(valveId, open, reason, null);
+    }
+
+    @Transactional
+    public boolean manualControlValveWithDegree(UUID valveId, boolean open, String reason, Integer openingDegree) {
         return valveRepository.findById(valveId)
                 .map(valve -> {
                     if (open) {
-                        openValve(valve, reason);
+                        Integer degree = openingDegree != null ? openingDegree : 
+                            (valve.getOpeningDegree() != null ? valve.getOpeningDegree() : 100);
+                        openValveWithDegree(valve, reason, degree);
                         
                         Zone zone = valve.getZone();
                         if (zone != null) {
@@ -259,6 +292,9 @@ public class IrrigationControlService {
                             record.setValve(valve);
                             record.setStartTime(LocalDateTime.now());
                             record.setReason("手动控制: " + reason);
+                            record.setExecutionMode("manual");
+                            record.setIrrigationType("irrigation");
+                            record.setStatus("running");
                             irrigationRecordRepository.save(record);
                         }
                     } else {
@@ -267,6 +303,13 @@ public class IrrigationControlService {
                         irrigationRecordRepository.findActiveRecordByValveId(valveId)
                                 .ifPresent(record -> {
                                     record.setEndTime(LocalDateTime.now());
+                                    record.setStatus("completed");
+                                    if (valve.getFlowRate() != null) {
+                                        long durationSeconds = java.time.Duration.between(record.getStartTime(), LocalDateTime.now()).getSeconds();
+                                        BigDecimal waterAmount = valve.getFlowRate()
+                                                .multiply(BigDecimal.valueOf(durationSeconds / 3600.0));
+                                        record.setWaterAmount(waterAmount);
+                                    }
                                     irrigationRecordRepository.save(record);
                                 });
                     }
@@ -275,12 +318,100 @@ public class IrrigationControlService {
                 .orElse(false);
     }
 
+    public void startFertilizerPump(FertilizerPump pump, String reason, Integer openingDegree) {
+        Device device = pump.getDevice();
+        if (device == null) {
+            log.error("Fertilizer pump {} has no associated device", pump.getId());
+            return;
+        }
+
+        com.fertigate.dto.FertilizerPumpCommandDTO command = new com.fertigate.dto.FertilizerPumpCommandDTO();
+        command.setDeviceCode(device.getDeviceCode());
+        command.setRun(true);
+        command.setOpeningDegree(openingDegree != null ? openingDegree : 100);
+        command.setReason(reason);
+        command.setZone(pump.getZone() != null ? pump.getZone().getName() : "");
+        command.setTimestamp(LocalDateTime.now());
+
+        mqttConfig.publish(fertilizerPumpCommandTopic, command);
+        
+        pump.setIsRunning(true);
+        pump.setOpeningDegree(openingDegree != null ? openingDegree : 100);
+        pump.setLastOperation(LocalDateTime.now());
+        fertilizerPumpRepository.save(pump);
+        
+        log.info("Sent start command to fertilizer pump {} ({}) with opening degree {}%", 
+                pump.getId(), device.getDeviceCode(), openingDegree);
+    }
+
+    public void stopFertilizerPump(FertilizerPump pump, String reason) {
+        Device device = pump.getDevice();
+        if (device == null) {
+            log.error("Fertilizer pump {} has no associated device", pump.getId());
+            return;
+        }
+
+        com.fertigate.dto.FertilizerPumpCommandDTO command = new com.fertigate.dto.FertilizerPumpCommandDTO();
+        command.setDeviceCode(device.getDeviceCode());
+        command.setRun(false);
+        command.setReason(reason);
+        command.setZone(pump.getZone() != null ? pump.getZone().getName() : "");
+        command.setTimestamp(LocalDateTime.now());
+
+        mqttConfig.publish(fertilizerPumpCommandTopic, command);
+        
+        pump.setIsRunning(false);
+        pump.setOpeningDegree(0);
+        pump.setLastOperation(LocalDateTime.now());
+        fertilizerPumpRepository.save(pump);
+        
+        log.info("Sent stop command to fertilizer pump {} ({})", pump.getId(), device.getDeviceCode());
+    }
+
+    @Transactional
+    public boolean manualControlFertilizerPump(UUID pumpId, boolean run, String reason, Integer openingDegree) {
+        return fertilizerPumpRepository.findById(pumpId)
+                .map(pump -> {
+                    if (run) {
+                        startFertilizerPump(pump, "手动控制: " + reason, 
+                            openingDegree != null ? openingDegree : 100);
+                        
+                        Zone zone = pump.getZone();
+                        if (zone != null) {
+                            IrrigationRecord record = new IrrigationRecord();
+                            record.setZone(zone);
+                            record.setStartTime(LocalDateTime.now());
+                            record.setReason("手动施肥: " + reason);
+                            record.setExecutionMode("manual");
+                            record.setIrrigationType("fertilization");
+                            record.setStatus("running");
+                            irrigationRecordRepository.save(record);
+                        }
+                    } else {
+                        stopFertilizerPump(pump, reason);
+                    }
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    public void scheduleValveStop(UUID valveId, LocalDateTime stopTime, String reason) {
+        valveScheduledStop.put(valveId, stopTime);
+        log.info("Scheduled stop for valve {} at {}", valveId, stopTime);
+    }
+
+    public void schedulePumpStop(UUID pumpId, LocalDateTime stopTime, String reason) {
+        pumpScheduledStop.put(pumpId, stopTime);
+        log.info("Scheduled stop for pump {} at {}", pumpId, stopTime);
+    }
+
     public void setControlMode(String mode) {
         this.controlMode = mode;
         log.info("Control mode changed to: {}", mode);
         
         if ("manual".equals(mode)) {
             valveScheduledStop.clear();
+            pumpScheduledStop.clear();
         }
     }
 
@@ -295,24 +426,35 @@ public class IrrigationControlService {
     public Map<String, Object> getControlStatus() {
         Map<String, Object> status = new HashMap<>();
         status.put("controlMode", controlMode);
-        status.put("scheduledStops", valveScheduledStop.size());
+        status.put("scheduledValveStopsCount", valveScheduledStop.size());
+        status.put("scheduledPumpStopsCount", pumpScheduledStop.size());
         status.put("openValves", valveRepository.findByIsOpenTrue().size());
+        status.put("runningPumps", fertilizerPumpRepository.findByIsRunningTrue().size());
         
-        List<Map<String, Object>> scheduledList = new ArrayList<>();
+        List<Map<String, Object>> scheduledValveList = new ArrayList<>();
         for (Map.Entry<UUID, LocalDateTime> entry : valveScheduledStop.entrySet()) {
             Map<String, Object> item = new HashMap<>();
             item.put("valveId", entry.getKey());
             item.put("scheduledStopTime", entry.getValue());
-            scheduledList.add(item);
+            scheduledValveList.add(item);
         }
-        status.put("scheduledValveStops", scheduledList);
+        status.put("scheduledValveStops", scheduledValveList);
+        
+        List<Map<String, Object>> scheduledPumpList = new ArrayList<>();
+        for (Map.Entry<UUID, LocalDateTime> entry : pumpScheduledStop.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("pumpId", entry.getKey());
+            item.put("scheduledStopTime", entry.getValue());
+            scheduledPumpList.add(item);
+        }
+        status.put("scheduledPumpStops", scheduledPumpList);
         
         return status;
     }
 
     @Transactional
     public void emergencyStop() {
-        log.warn("EMERGENCY STOP ACTIVATED - Closing all valves");
+        log.warn("EMERGENCY STOP ACTIVATED - Closing all valves and pumps");
         
         List<Valve> allValves = valveRepository.findAll();
         for (Valve valve : allValves) {
@@ -322,11 +464,24 @@ public class IrrigationControlService {
                 irrigationRecordRepository.findActiveRecordByValveId(valve.getId())
                         .ifPresent(record -> {
                             record.setEndTime(LocalDateTime.now());
+                            record.setStatus("emergency_stopped");
                             irrigationRecordRepository.save(record);
                         });
             }
         }
+
+        List<FertilizerPump> allPumps = fertilizerPumpRepository.findAll();
+        for (FertilizerPump pump : allPumps) {
+            if (Boolean.TRUE.equals(pump.getIsRunning())) {
+                stopFertilizerPump(pump, "紧急停止");
+            }
+        }
         
         valveScheduledStop.clear();
+        pumpScheduledStop.clear();
+
+        log.warn("EMERGENCY STOP COMPLETED - {} valves closed, {} pumps stopped", 
+                allValves.stream().filter(Valve::getIsOpen).count(),
+                allPumps.stream().filter(FertilizerPump::getIsRunning).count());
     }
 }

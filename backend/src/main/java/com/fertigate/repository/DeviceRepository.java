@@ -20,4 +20,19 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
     List<Device> findByZoneId(UUID zoneId);
     
     boolean existsByDeviceCode(String deviceCode);
+
+    @Query("SELECT d FROM Device d WHERE d.status != 'online'")
+    List<Device> findOfflineDevices();
+
+    @Query("SELECT d FROM Device d WHERE d.type = :type AND d.status = 'online'")
+    List<Device> findOnlineDevicesByType(String type);
+
+    @Query("SELECT COUNT(d) FROM Device d WHERE d.status = 'online'")
+    long countOnlineDevices();
+
+    @Query("SELECT COUNT(d) FROM Device d WHERE d.status != 'online'")
+    long countOfflineDevices();
+
+    @Query("SELECT COUNT(d) FROM Device d WHERE d.type = :type")
+    long countByType(String type);
 }

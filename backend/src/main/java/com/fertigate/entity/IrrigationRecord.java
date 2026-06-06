@@ -42,6 +42,27 @@ public class IrrigationRecord {
     @Column(length = 200)
     private String reason;
 
+    @Column(name = "execution_mode", length = 20)
+    private String executionMode = "auto";
+
+    @Column(name = "irrigation_type", length = 20)
+    private String irrigationType = "irrigation";
+
+    @Column(name = "fertilizer_amount", precision = 8, scale = 2)
+    private java.math.BigDecimal fertilizerAmount = new java.math.BigDecimal("0.00");
+
+    @Column(name = "fertilizer_type", length = 50)
+    private String fertilizerType;
+
+    @Column(name = "average_ec", precision = 5, scale = 2)
+    private java.math.BigDecimal averageEc;
+
+    @Column(name = "average_ph", precision = 5, scale = 2)
+    private java.math.BigDecimal averagePh;
+
+    @Column(length = 20)
+    private String status = "completed";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }
