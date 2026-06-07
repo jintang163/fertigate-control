@@ -260,3 +260,86 @@ export interface GanttTask {
   zoneId: string
   status: 'pending' | 'running' | 'completed' | 'cancelled'
 }
+
+export interface User {
+  id: string
+  username: string
+  realName: string
+  email?: string
+  phone?: string
+  enabled: boolean
+  lastLoginTime?: string
+  lastLoginIp?: string
+  createdAt: string
+  updatedAt: string
+  roleCodes?: string[]
+  roleNames?: string[]
+}
+
+export interface Role {
+  id: string
+  roleCode: string
+  roleName: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  permissionCodes?: string[]
+  permissionNames?: string[]
+}
+
+export interface OperationLog {
+  id: string
+  userId?: string
+  username: string
+  realName: string
+  operation: string
+  operationType: string
+  operationTypeDesc: string
+  description?: string
+  targetType?: string
+  targetId?: string
+  oldValue?: string
+  newValue?: string
+  ipAddress?: string
+  userAgent?: string
+  requestUri?: string
+  requestMethod?: string
+  success: boolean
+  errorMessage?: string
+  executionTime?: number
+  createdAt: string
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface LoginResponse {
+  token: string
+  tokenType: string
+  expiresIn: number
+  userId: string
+  username: string
+  realName: string
+  roles: string[]
+  permissions: string[]
+}
+
+export interface CreateUserRequest {
+  username: string
+  password: string
+  realName: string
+  email?: string
+  phone?: string
+  enabled?: boolean
+  roleIds?: string[]
+}
+
+export interface UpdateUserRequest {
+  realName?: string
+  email?: string
+  phone?: string
+  enabled?: boolean
+  roleIds?: string[]
+}

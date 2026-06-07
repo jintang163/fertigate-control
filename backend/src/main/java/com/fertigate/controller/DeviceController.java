@@ -1,7 +1,9 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.dto.DeviceStatusDTO;
 import com.fertigate.entity.Device;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.entity.Valve;
 import com.fertigate.repository.DeviceRepository;
 import com.fertigate.repository.ValveRepository;
@@ -61,6 +63,7 @@ public class DeviceController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建设备", type = OperationLog.OperationType.CREATE, targetType = "device")
     public ResponseEntity<Device> createDevice(@RequestBody Device device) {
         if (deviceRepository.existsByDeviceCode(device.getDeviceCode())) {
             return ResponseEntity.badRequest().build();
@@ -70,6 +73,7 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新设备", type = OperationLog.OperationType.UPDATE, targetType = "device")
     public ResponseEntity<Device> updateDevice(@PathVariable UUID id, @RequestBody Device device) {
         return deviceRepository.findById(id)
                 .map(existing -> {
@@ -81,6 +85,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除设备", type = OperationLog.OperationType.DELETE, targetType = "device")
     public ResponseEntity<Void> deleteDevice(@PathVariable UUID id) {
         if (!deviceRepository.existsById(id)) {
             return ResponseEntity.notFound().build();

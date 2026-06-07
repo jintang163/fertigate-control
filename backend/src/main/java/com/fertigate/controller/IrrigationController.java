@@ -1,8 +1,10 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.dto.IrrigationDecision;
 import com.fertigate.entity.IrrigationPlan;
 import com.fertigate.entity.IrrigationRecord;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.entity.Zone;
 import com.fertigate.repository.IrrigationPlanRepository;
 import com.fertigate.repository.IrrigationRecordRepository;
@@ -45,6 +47,7 @@ public class IrrigationController {
     }
 
     @PutMapping("/control/mode")
+    @OperationLog(operation = "控制模式切换", type = OperationLog.OperationType.CONTROL, targetType = "irrigation_control")
     public ResponseEntity<Map<String, String>> setControlMode(@RequestParam String mode) {
         if (!"auto".equals(mode) && !"manual".equals(mode)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid mode. Use 'auto' or 'manual'"));
@@ -54,12 +57,14 @@ public class IrrigationController {
     }
 
     @PostMapping("/control/emergency-stop")
+    @OperationLog(operation = "紧急停止", type = OperationLog.OperationType.CONTROL, targetType = "irrigation_control")
     public ResponseEntity<Map<String, String>> emergencyStop() {
         irrigationControlService.emergencyStop();
         return ResponseEntity.ok(Map.of("status", "emergency_stop_executed"));
     }
 
     @PostMapping("/valve/{valveId}/control")
+    @OperationLog(operation = "阀门控制", type = OperationLog.OperationType.CONTROL, targetType = "valve")
     public ResponseEntity<Map<String, Object>> controlValve(
             @PathVariable UUID valveId,
             @RequestParam boolean open,
@@ -79,6 +84,7 @@ public class IrrigationController {
     }
 
     @PostMapping("/valve/{valveId}/control-with-degree")
+    @OperationLog(operation = "阀门开度控制", type = OperationLog.OperationType.CONTROL, targetType = "valve")
     public ResponseEntity<Map<String, Object>> controlValveWithDegree(
             @PathVariable UUID valveId,
             @RequestParam boolean open,
@@ -168,12 +174,14 @@ public class IrrigationController {
     }
 
     @PostMapping("/plan")
+    @OperationLog(operation = "创建灌溉计划", type = OperationLog.OperationType.CREATE, targetType = "irrigation_plan")
     public ResponseEntity<IrrigationPlan> createPlan(@RequestBody IrrigationPlan plan) {
         IrrigationPlan saved = irrigationPlanRepository.save(plan);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/plan/{id}/active")
+    @OperationLog(operation = "灌溉计划状态控制", type = OperationLog.OperationType.CONTROL, targetType = "irrigation_plan")
     public ResponseEntity<IrrigationPlan> setPlanActive(
             @PathVariable UUID id,
             @RequestParam boolean active) {

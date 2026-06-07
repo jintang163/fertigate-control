@@ -110,6 +110,14 @@
             <SettingOutlined />
             <span>系统设置</span>
           </a-menu-item>
+          <a-menu-item key="/user-management" v-if="isAdmin">
+            <UserOutlined />
+            <span>用户管理</span>
+          </a-menu-item>
+          <a-menu-item key="/operation-logs" v-if="isAdmin || isOperator">
+            <FileTextOutlined />
+            <span>操作日志</span>
+          </a-menu-item>
         </a-sub-menu>
       </a-menu>
     </a-layout-sider>
@@ -132,9 +140,39 @@
               <StopOutlined />
               紧急停止
             </a-button>
-            <a-avatar style="background-color: #1890ff">
-              <UserOutlined />
-            </a-avatar>
+            <a-dropdown>
+              <div class="user-dropdown-trigger">
+                <a-avatar style="background-color: #1890ff">
+                  <UserOutlined />
+                </a-avatar>
+                <span class="username" v-if="currentUser">{{ currentUser.realName || currentUser.username }}</span>
+                <DownOutlined class="dropdown-icon" />
+              </div>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item disabled class="user-info-item">
+                    <div class="user-info">
+                      <div class="user-name">{{ currentUser?.realName || currentUser?.username }}</div>
+                      <div class="user-roles">
+                        <a-tag
+                          v-for="role in currentUser?.roleCodes"
+                          :key="role"
+                          :color="getRoleColor(role)"
+                          size="small"
+                        >
+                          {{ getRoleName(role) }}
+                        </a-tag>
+                      </div>
+                    </div>
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="logout" @click="handleLogout">
+                    <LogoutOutlined />
+                    <span>退出登录</span>
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </a-space>
         </div>
       </a-layout-header>
@@ -163,13 +201,16 @@ import {
   ApartmentOutlined,
   SlidersOutlined,
   CalendarOutlined,
-  FileExcelOutlined
+  FileExcelOutlined,
+  UserOutlined,
+  DownOutlined,
+  LogoutOutlined
 } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-const { unacknowledgedAlerts, controlStatus } = storeToRefs(appStore)
+const { unacknowledgedAlerts, controlStatus, currentUser, isAdmin, isOperator } = storeToRefs(appStore)
 
 const collapsed = ref(false)
 const selectedKeys = ref<string[]>([])
@@ -190,7 +231,9 @@ const pathToMenuMap: Record<string, string> = {
   '/devices': 'config',
   '/crops': 'config',
   '/zones': 'config',
-  '/settings': 'config'
+  '/settings': 'config',
+  '/user-management': 'config',
+  '/operation-logs': 'config'
 }
 
 const alertCount = computed(() => unacknowledgedAlerts.value.length)
@@ -199,6 +242,24 @@ const controlMode = computed(() => controlStatus.value?.controlMode || 'auto')
 const currentPageTitle = computed(() => {
   return route.meta.title as string || '水肥一体化智能灌溉控制系统'
 })
+
+function getRoleColor(roleCode: string): string {
+  const colors: Record<string, string> = {
+    admin: 'red',
+    operator: 'blue',
+    viewer: 'default'
+  }
+  return colors[roleCode] || 'default'
+}
+
+function getRoleName(roleCode: string): string {
+  const names: Record<string, string> = {
+    admin: '管理员',
+    operator: '操作员',
+    viewer: '只读用户'
+  }
+  return names[roleCode] || roleCode
+}
 
 function handleMenuClick({ key }: { key: string }) {
   router.push(key)
@@ -226,6 +287,20 @@ function handleEmergencyStop() {
   })
 }
 
+function handleLogout() {
+  Modal.confirm({
+    title: '确认退出',
+    content: '确定要退出登录吗？',
+    okText: '确认退出',
+    cancelText: '取消',
+    onOk: async () => {
+      await appStore.logout()
+      message.success('已退出登录')
+      router.push('/login')
+    }
+  })
+}
+
 watch(() => route.path, (newPath) => {
   selectedKeys.value = [newPath]
   const menuKey = pathToMenuMap[newPath]
@@ -235,6 +310,7 @@ watch(() => route.path, (newPath) => {
 }, { immediate: true })
 
 onMounted(async () => {
+  await appStore.fetchCurrentUser()
   await appStore.fetchAll()
   
   setInterval(async () => {
@@ -288,6 +364,56 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 600;
   color: #262626;
+}
+
+.user-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.user-dropdown-trigger:hover {
+  background-color: #f5f5f5;
+}
+
+.username {
+  margin-left: 8px;
+  margin-right: 4px;
+  color: #262626;
+  font-size: 14px;
+}
+
+.dropdown-icon {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.user-info-item {
+  cursor: default !important;
+}
+
+.user-info-item:hover {
+  background-color: transparent !important;
+}
+
+.user-info {
+  min-width: 180px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.user-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .fade-enter-active,

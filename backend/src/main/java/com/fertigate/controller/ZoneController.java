@@ -1,5 +1,7 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.entity.Zone;
 import com.fertigate.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,12 +31,14 @@ public class ZoneController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建灌区", type = OperationLog.OperationType.CREATE, targetType = "zone")
     public ResponseEntity<Zone> createZone(@RequestBody Zone zone) {
         Zone saved = zoneRepository.save(zone);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新灌区", type = OperationLog.OperationType.UPDATE, targetType = "zone")
     public ResponseEntity<Zone> updateZone(@PathVariable UUID id, @RequestBody Zone zone) {
         return zoneRepository.findById(id)
                 .map(existing -> {
@@ -46,6 +50,7 @@ public class ZoneController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除灌区", type = OperationLog.OperationType.DELETE, targetType = "zone")
     public ResponseEntity<Void> deleteZone(@PathVariable UUID id) {
         if (!zoneRepository.existsById(id)) {
             return ResponseEntity.notFound().build();

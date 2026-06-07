@@ -4,7 +4,10 @@ import type {
   IrrigationDecision, IrrigationPlan, IrrigationRecord,
   ControlStatus, SensorDataPoint,
   ThresholdStrategy, RotationSchedule, FertigationRecord,
-  ZoneSensorData, WeatherData
+  ZoneSensorData, WeatherData,
+  User, Role, OperationLog,
+  LoginRequest, LoginResponse,
+  CreateUserRequest, UpdateUserRequest
 } from '@/types'
 
 export const dashboardApi = {
@@ -164,4 +167,52 @@ export const monitorApi = {
     request.get<any, SensorDataPoint[]>(`/monitor/historical/${zoneId}/${sensorType}`, {
       params: { startTime, endTime }
     })
+}
+
+export const authApi = {
+  login: (data: LoginRequest) => 
+    request.post<any, LoginResponse>('/auth/login', data),
+  logout: () => 
+    request.post<any, any>('/auth/logout'),
+  getUserInfo: () => 
+    request.get<any, User>('/auth/userinfo'),
+  getPermissions: () => 
+    request.get<any, string[]>('/auth/permissions')
+}
+
+export const userApi = {
+  getAll: () => 
+    request.get<any, User[]>('/user'),
+  getById: (id: string) => 
+    request.get<any, User>(`/user/${id}`),
+  create: (data: CreateUserRequest) => 
+    request.post<any, User>('/user', data),
+  update: (id: string, data: UpdateUserRequest) => 
+    request.put<any, User>(`/user/${id}`, data),
+  delete: (id: string) => 
+    request.delete(`/user/${id}`),
+  resetPassword: (id: string, password: string) => 
+    request.post<any, any>(`/user/${id}/reset-password`, { password }),
+  getAllRoles: () => 
+    request.get<any, Role[]>('/user/roles')
+}
+
+export const operationLogApi = {
+  getLogs: (params: {
+    username?: string
+    operationType?: string
+    targetType?: string
+    success?: boolean
+    startTime?: string
+    endTime?: string
+    page?: number
+    size?: number
+  }) => 
+    request.get<any, { content: OperationLog[], total: number, totalPages: number }>('/operation-log', { params }),
+  getById: (id: string) => 
+    request.get<any, OperationLog>(`/operation-log/${id}`),
+  getStatistics: (startTime?: string, endTime?: string) => 
+    request.get<any, any>('/operation-log/statistics', { params: { startTime, endTime } }),
+  cleanOldLogs: (beforeTime: string) => 
+    request.delete<any, any>('/operation-log/clean', { params: { beforeTime } })
 }

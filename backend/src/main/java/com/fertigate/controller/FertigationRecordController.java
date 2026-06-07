@@ -1,6 +1,8 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.dto.FertigationRecordDTO;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.service.FertigationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,6 +84,7 @@ public class FertigationRecordController {
     }
 
     @GetMapping("/export")
+    @OperationLog(operation = "导出灌肥记录", type = OperationLog.OperationType.EXPORT, targetType = "fertigation_record")
     public ResponseEntity<byte[]> exportToExcel(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
@@ -113,12 +116,14 @@ public class FertigationRecordController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建灌肥记录", type = OperationLog.OperationType.CREATE, targetType = "fertigation_record")
     public ResponseEntity<FertigationRecordDTO> createRecord(@RequestBody FertigationRecordDTO dto) {
         FertigationRecordDTO created = fertigationRecordService.createRecord(dto);
         return ResponseEntity.ok(created);
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新灌肥记录", type = OperationLog.OperationType.UPDATE, targetType = "fertigation_record")
     public ResponseEntity<FertigationRecordDTO> updateRecord(
             @PathVariable UUID id,
             @RequestBody FertigationRecordDTO dto) {
@@ -128,6 +133,7 @@ public class FertigationRecordController {
     }
 
     @PutMapping("/{id}/complete")
+    @OperationLog(operation = "完成灌肥记录", type = OperationLog.OperationType.UPDATE, targetType = "fertigation_record")
     public ResponseEntity<FertigationRecordDTO> completeRecord(@PathVariable UUID id) {
         return fertigationRecordService.completeRecord(id)
                 .map(ResponseEntity::ok)
@@ -135,6 +141,7 @@ public class FertigationRecordController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除灌肥记录", type = OperationLog.OperationType.DELETE, targetType = "fertigation_record")
     public ResponseEntity<Void> deleteRecord(@PathVariable UUID id) {
         if (fertigationRecordService.deleteRecord(id)) {
             return ResponseEntity.ok().build();

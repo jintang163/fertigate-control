@@ -1,8 +1,10 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.dto.GanttTaskDTO;
 import com.fertigate.dto.RotationExecutionDTO;
 import com.fertigate.dto.RotationScheduleDTO;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.service.RotationScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ public class RotationScheduleController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建轮灌计划", type = OperationLog.OperationType.CREATE, targetType = "rotation_schedule")
     public ResponseEntity<RotationScheduleDTO> createSchedule(@RequestBody RotationScheduleDTO dto) {
         RotationScheduleDTO created = rotationScheduleService.createSchedule(dto);
         return ResponseEntity.ok(created);
@@ -59,6 +62,7 @@ public class RotationScheduleController {
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新轮灌计划", type = OperationLog.OperationType.UPDATE, targetType = "rotation_schedule")
     public ResponseEntity<RotationScheduleDTO> updateSchedule(
             @PathVariable UUID id,
             @RequestBody RotationScheduleDTO dto) {
@@ -86,6 +90,7 @@ public class RotationScheduleController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除轮灌计划", type = OperationLog.OperationType.DELETE, targetType = "rotation_schedule")
     public ResponseEntity<Void> deleteSchedule(@PathVariable UUID id) {
         if (rotationScheduleService.deleteSchedule(id)) {
             return ResponseEntity.ok().build();

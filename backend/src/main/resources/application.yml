@@ -76,11 +76,16 @@ control:
     max-overload-threshold: 10.0
     communication-timeout-seconds: 60
 
+jwt:
+  secret: fertigate-secret-key-2024-very-long-string-for-security-please-change-in-production
+  expiration-hours: 24
+
 logging:
   level:
     root: INFO
     com.fertigate: DEBUG
     com.hivemq.client: WARN
+    org.springframework.security: DEBUG
   file:
     name: logs/fertigate-backend.log
   pattern:

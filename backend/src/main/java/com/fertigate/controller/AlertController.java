@@ -1,6 +1,8 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.entity.Alert;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.repository.AlertRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,7 @@ public class AlertController {
     }
 
     @PutMapping("/{id}/acknowledge")
+    @OperationLog(operation = "确认告警", type = OperationLog.OperationType.ACKNOWLEDGE, targetType = "alert")
     public ResponseEntity<Alert> acknowledgeAlert(@PathVariable UUID id) {
         return alertRepository.findById(id)
                 .map(alert -> {
@@ -52,6 +55,7 @@ public class AlertController {
     }
 
     @PutMapping("/acknowledge-all")
+    @OperationLog(operation = "批量确认告警", type = OperationLog.OperationType.ACKNOWLEDGE, targetType = "alert")
     public ResponseEntity<String> acknowledgeAllAlerts() {
         List<Alert> alerts = alertRepository.findByIsAcknowledgedFalseOrderByCreatedAtDesc();
         for (Alert alert : alerts) {

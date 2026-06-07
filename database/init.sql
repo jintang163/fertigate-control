@@ -255,3 +255,88 @@ CREATE INDEX idx_fertilizer_pumps_zone ON fertilizer_pumps(zone_id);
 CREATE INDEX idx_growth_stage_records_crop ON growth_stage_records(crop_id);
 CREATE INDEX idx_threshold_strategies_zone ON threshold_strategies(zone_id);
 CREATE INDEX idx_rotation_schedules_time ON rotation_schedules(next_execution);
+
+-- 用户表
+CREATE TABLE IF NOT EXISTS sys_users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    real_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    enabled BOOLEAN DEFAULT TRUE,
+    last_login_time TIMESTAMP,
+    last_login_ip VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 角色表
+CREATE TABLE IF NOT EXISTS sys_roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    role_code VARCHAR(50) UNIQUE NOT NULL,
+    role_name VARCHAR(50) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 权限表
+CREATE TABLE IF NOT EXISTS sys_permissions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    permission_code VARCHAR(100) UNIQUE NOT NULL,
+    permission_name VARCHAR(100) NOT NULL,
+    resource_url VARCHAR(200),
+    resource_method VARCHAR(20),
+    description TEXT,
+    parent_id UUID,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS sys_user_roles (
+    user_id UUID REFERENCES sys_users(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES sys_roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- 角色权限关联表
+CREATE TABLE IF NOT EXISTS sys_role_permissions (
+    role_id UUID REFERENCES sys_roles(id) ON DELETE CASCADE,
+    permission_id UUID REFERENCES sys_permissions(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
+);
+
+-- 操作日志表
+CREATE TABLE IF NOT EXISTS sys_operation_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID,
+    username VARCHAR(50),
+    real_name VARCHAR(50),
+    operation VARCHAR(50) NOT NULL,
+    operation_type VARCHAR(20) NOT NULL,
+    description TEXT,
+    target_type VARCHAR(50),
+    target_id VARCHAR(100),
+    old_value TEXT,
+    new_value TEXT,
+    ip_address VARCHAR(50),
+    user_agent VARCHAR(200),
+    request_uri VARCHAR(500),
+    request_method VARCHAR(10),
+    success BOOLEAN DEFAULT TRUE,
+    error_message TEXT,
+    execution_time BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_sys_users_username ON sys_users(username);
+CREATE INDEX IF NOT EXISTS idx_sys_roles_code ON sys_roles(role_code);
+CREATE INDEX IF NOT EXISTS idx_sys_permissions_code ON sys_permissions(permission_code);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_user ON sys_operation_logs(username);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_type ON sys_operation_logs(operation_type);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_target ON sys_operation_logs(target_type);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_time ON sys_operation_logs(created_at);

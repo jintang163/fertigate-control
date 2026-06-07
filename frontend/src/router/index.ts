@@ -1,7 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAppStore } from '@/stores'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { title: '登录', public: true }
+  },
   {
     path: '/',
     redirect: '/monitor-screen'
@@ -89,6 +96,18 @@ const routes: RouteRecordRaw[] = [
     name: 'Settings',
     component: () => import('@/views/SystemSettings.vue'),
     meta: { title: '系统设置', icon: 'ToolOutlined' }
+  },
+  {
+    path: '/user-management',
+    name: 'UserManagement',
+    component: () => import('@/views/UserManagement.vue'),
+    meta: { title: '用户管理', icon: 'UserOutlined', roles: ['admin'] }
+  },
+  {
+    path: '/operation-logs',
+    name: 'OperationLogs',
+    component: () => import('@/views/OperationLogs.vue'),
+    meta: { title: '操作日志', icon: 'FileTextOutlined', roles: ['admin', 'operator'] }
   }
 ]
 
@@ -97,8 +116,42 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   document.title = `${to.meta.title || '水肥一体化'} - 智能灌溉控制系统`
+  
+  const store = useAppStore()
+  
+  if (to.meta.public) {
+    if (store.isLoggedIn && to.path === '/login') {
+      next('/')
+      return
+    }
+    next()
+    return
+  }
+  
+  if (!store.isLoggedIn) {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+    return
+  }
+  
+  if (!store.currentUser) {
+    try {
+      await store.fetchCurrentUser()
+    } catch (e) {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+  
+  if (to.meta.roles) {
+    const roles = to.meta.roles as string[]
+    if (!store.hasAnyRole(roles)) {
+      next('/403')
+      return
+    }
+  }
+  
   next()
 })
 

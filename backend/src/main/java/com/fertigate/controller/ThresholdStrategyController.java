@@ -1,6 +1,8 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.dto.ThresholdStrategyDTO;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.service.ThresholdStrategyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -54,12 +56,14 @@ public class ThresholdStrategyController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建阈值策略", type = OperationLog.OperationType.CREATE, targetType = "threshold_strategy")
     public ResponseEntity<ThresholdStrategyDTO> createStrategy(@RequestBody ThresholdStrategyDTO dto) {
         ThresholdStrategyDTO created = thresholdStrategyService.createStrategy(dto);
         return ResponseEntity.ok(created);
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新阈值策略", type = OperationLog.OperationType.UPDATE, targetType = "threshold_strategy")
     public ResponseEntity<ThresholdStrategyDTO> updateStrategy(
             @PathVariable UUID id,
             @RequestBody ThresholdStrategyDTO dto) {
@@ -78,6 +82,7 @@ public class ThresholdStrategyController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除阈值策略", type = OperationLog.OperationType.DELETE, targetType = "threshold_strategy")
     public ResponseEntity<Void> deleteStrategy(@PathVariable UUID id) {
         if (thresholdStrategyService.deleteStrategy(id)) {
             return ResponseEntity.ok().build();
