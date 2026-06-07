@@ -2,7 +2,9 @@ import request from './request'
 import type { 
   Device, Valve, Zone, Crop, Alert, 
   IrrigationDecision, IrrigationPlan, IrrigationRecord,
-  ControlStatus, SensorDataPoint 
+  ControlStatus, SensorDataPoint,
+  ThresholdStrategy, RotationSchedule, FertigationRecord,
+  ZoneSensorData, WeatherData
 } from '@/types'
 
 export const dashboardApi = {
@@ -83,7 +85,81 @@ export const alertApi = {
   getAll: () => request.get<any, Alert[]>('/alert'),
   getUnacknowledged: () => request.get<any, Alert[]>('/alert/unacknowledged'),
   getById: (id: string) => request.get<any, Alert>(`/alert/${id}`),
-  getByLevel: (level: string) => request.get<any, Alert[]>('/alert/level/' + level),
+  getByLevel: (level: string) => request.get<any, Alert[]>(`/alert/level/` + level),
   acknowledge: (id: string) => request.put<any, Alert>(`/alert/${id}/acknowledge`),
   acknowledgeAll: () => request.put<any, string>('/alert/acknowledge-all')
+}
+
+export const thresholdApi = {
+  getAll: () => request.get<any, ThresholdStrategy[]>('/threshold'),
+  getActive: () => request.get<any, ThresholdStrategy[]>('/threshold/active'),
+  getById: (id: string) => request.get<any, ThresholdStrategy>(`/threshold/${id}`),
+  getByZone: (zoneId: string) => request.get<any, ThresholdStrategy[]>(`/threshold/zone/${zoneId}`),
+  getByCrop: (cropId: string) => request.get<any, ThresholdStrategy[]>(`/threshold/crop/${cropId}`),
+  getByZoneAndCrop: (zoneId: string, cropId: string) => 
+    request.get<any, ThresholdStrategy>(`/threshold/zone/${zoneId}/crop/${cropId}`),
+  create: (data: Partial<ThresholdStrategy>) => 
+    request.post<any, ThresholdStrategy>('/threshold', data),
+  update: (id: string, data: Partial<ThresholdStrategy>) => 
+    request.put<any, ThresholdStrategy>(`/threshold/${id}`, data),
+  setActive: (id: string, active: boolean) => 
+    request.put<any, ThresholdStrategy>(`/threshold/${id}/active`, null, { params: { active } }),
+  delete: (id: string) => request.delete(`/threshold/${id}`),
+  checkThresholds: (zoneId: string, sensorData: Record<string, number>) => 
+    request.post<any, any>(`/threshold/check/${zoneId}`, sensorData)
+}
+
+export const rotationApi = {
+  getAll: () => request.get<any, RotationSchedule[]>('/rotation'),
+  getActive: () => request.get<any, RotationSchedule[]>('/rotation/active'),
+  getById: (id: string) => request.get<any, RotationSchedule>(`/rotation/${id}`),
+  getByZone: (zoneId: string) => request.get<any, RotationSchedule[]>(`/rotation/zone/${zoneId}`),
+  create: (data: Partial<RotationSchedule>) => 
+    request.post<any, RotationSchedule>('/rotation', data),
+  generatePlan: (zoneId: string, irrigationType = 'irrigation', priority = 1) => 
+    request.post<any, RotationSchedule[]>('/rotation/generate', null, { 
+      params: { zoneId, irrigationType, priority } 
+    }),
+  update: (id: string, data: Partial<RotationSchedule>) => 
+    request.put<any, RotationSchedule>(`/rotation/${id}`, data),
+  setActive: (id: string, active: boolean) => 
+    request.put<any, RotationSchedule>(`/rotation/${id}/active`, null, { params: { active } }),
+  executeNow: (id: string) => request.post<any, any>(`/rotation/${id}/execute`),
+  delete: (id: string) => request.delete(`/rotation/${id}`)
+}
+
+export const fertigationApi = {
+  getAll: (startTime?: string, endTime?: string) => 
+    request.get<any, FertigationRecord[]>('/fertigation', { params: { startTime, endTime } }),
+  getById: (id: string) => request.get<any, FertigationRecord>(`/fertigation/${id}`),
+  getByZone: (zoneId: string, startTime?: string, endTime?: string) => 
+    request.get<any, FertigationRecord[]>(`/fertigation/zone/${zoneId}`, { params: { startTime, endTime } }),
+  getByMode: (mode: string) => request.get<any, FertigationRecord[]>(`/fertigation/mode/${mode}`),
+  getByType: (type: string) => request.get<any, FertigationRecord[]>(`/fertigation/type/${type}`),
+  getStatistics: (zoneId: string, startTime: string, endTime: string) => 
+    request.get<any, any>('/fertigation/statistics', { params: { zoneId, startTime, endTime } }),
+  create: (data: Partial<FertigationRecord>) => 
+    request.post<any, FertigationRecord>('/fertigation', data),
+  update: (id: string, data: Partial<FertigationRecord>) => 
+    request.put<any, FertigationRecord>(`/fertigation/${id}`, data),
+  complete: (id: string) => request.put<any, FertigationRecord>(`/fertigation/${id}/complete`),
+  delete: (id: string) => request.delete(`/fertigation/${id}`),
+  exportExcel: (startTime?: string, endTime?: string, zoneId?: string) => 
+    request.get<any, Blob>('/fertigation/export', { 
+      params: { startTime, endTime, zoneId },
+      responseType: 'blob'
+    })
+}
+
+export const monitorApi = {
+  getZoneSensorData: (zoneId: string) => 
+    request.get<any, ZoneSensorData>(`/monitor/zone/${zoneId}/sensor`),
+  getAllZoneSensorData: () => 
+    request.get<any, ZoneSensorData[]>('/monitor/zone/sensor/all'),
+  getWeatherData: () => 
+    request.get<any, WeatherData>('/monitor/weather'),
+  getHistoricalData: (zoneId: string, sensorType: string, startTime: string, endTime: string) => 
+    request.get<any, SensorDataPoint[]>(`/monitor/historical/${zoneId}/${sensorType}`, {
+      params: { startTime, endTime }
+    })
 }

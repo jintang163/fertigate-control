@@ -4,11 +4,17 @@ import type { RouteRecordRaw } from 'vue-router'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/monitor-screen'
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
+    path: '/monitor-screen',
+    name: 'MonitorScreen',
+    component: () => import('@/views/MonitorScreen.vue'),
+    meta: { title: '监控大屏', icon: 'DesktopOutlined' }
+  },
+  {
+    path: '/monitor-dashboard',
+    name: 'MonitorDashboard',
     component: () => import('@/views/Dashboard.vue'),
     meta: { title: '监控总览', icon: 'DashboardOutlined' }
   },
@@ -19,16 +25,52 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '实时监控', icon: 'MonitorOutlined' }
   },
   {
+    path: '/history-trends',
+    name: 'HistoryTrends',
+    component: () => import('@/views/HistoryTrends.vue'),
+    meta: { title: '历史趋势', icon: 'LineChartOutlined' }
+  },
+  {
+    path: '/zone-map',
+    name: 'ZoneMap',
+    component: () => import('@/views/MonitorScreen.vue'),
+    meta: { title: '灌区地图', icon: 'EnvironmentOutlined' }
+  },
+  {
+    path: '/threshold-config',
+    name: 'ThresholdConfig',
+    component: () => import('@/views/ThresholdConfig.vue'),
+    meta: { title: '阈值策略', icon: 'SlidersOutlined' }
+  },
+  {
+    path: '/rotation-plan',
+    name: 'RotationPlan',
+    component: () => import('@/views/RotationPlan.vue'),
+    meta: { title: '轮灌计划', icon: 'CalendarOutlined' }
+  },
+  {
+    path: '/manual-control',
+    name: 'ManualControl',
+    component: () => import('@/views/ManualControl.vue'),
+    meta: { title: '手动控制', icon: 'ControlOutlined' }
+  },
+  {
+    path: '/alert-list',
+    name: 'AlertList',
+    component: () => import('@/views/AlertCenter.vue'),
+    meta: { title: '告警中心', icon: 'BellOutlined' }
+  },
+  {
+    path: '/fertigation-ledger',
+    name: 'FertigationLedger',
+    component: () => import('@/views/FertigationLedger.vue'),
+    meta: { title: '灌肥台账', icon: 'FileExcelOutlined' }
+  },
+  {
     path: '/devices',
     name: 'Devices',
     component: () => import('@/views/DeviceManagement.vue'),
     meta: { title: '设备管理', icon: 'SettingOutlined' }
-  },
-  {
-    path: '/irrigation',
-    name: 'Irrigation',
-    component: () => import('@/views/IrrigationControl.vue'),
-    meta: { title: '灌溉控制', icon: 'WaterToolOutlined' }
   },
   {
     path: '/crops',
@@ -41,18 +83,6 @@ const routes: RouteRecordRaw[] = [
     name: 'Zones',
     component: () => import('@/views/ZoneManagement.vue'),
     meta: { title: '区域管理', icon: 'AppstoreOutlined' }
-  },
-  {
-    path: '/alerts',
-    name: 'Alerts',
-    component: () => import('@/views/AlertCenter.vue'),
-    meta: { title: '告警中心', icon: 'BellOutlined' }
-  },
-  {
-    path: '/records',
-    name: 'Records',
-    component: () => import('@/views/IrrigationRecords.vue'),
-    meta: { title: '灌溉记录', icon: 'FileTextOutlined' }
   },
   {
     path: '/settings',

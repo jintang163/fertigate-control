@@ -134,3 +134,129 @@ export interface SensorDataPoint {
   device_code: string
   zone: string
 }
+
+export interface ThresholdStrategy {
+  id: string
+  name: string
+  description?: string
+  zoneId?: string
+  cropId?: string
+  minHumidity: number
+  maxHumidity: number
+  minEc: number
+  maxEc: number
+  minPh: number
+  maxPh: number
+  minTemperature: number
+  maxTemperature: number
+  maxWindSpeed: number
+  minRainfall: number
+  weatherLinkEnabled: boolean
+  avoidRainIrrigation: boolean
+  highTempIrrigation: boolean
+  isActive: boolean
+  priority: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RotationSchedule {
+  id: string
+  name: string
+  description?: string
+  strategyId?: string
+  zoneIds: string[]
+  startTime: string
+  endTime: string
+  duration: number
+  intervalHours: number
+  priority: number
+  waterAmount: number
+  fertilizerAmount: number
+  irrigationType: string
+  isActive: boolean
+  lastExecution?: string
+  nextExecution?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FertigationRecord {
+  id: string
+  zoneId: string
+  zoneName: string
+  valveId?: string
+  planId?: string
+  startTime: string
+  endTime?: string
+  durationSeconds: number
+  waterAmount: number
+  fertilizerAmount: number
+  fertilizerType?: string
+  averageEc: number
+  averagePh: number
+  executionMode: string
+  irrigationType: string
+  status: string
+  reason?: string
+}
+
+export interface ZoneSensorData {
+  zoneId: string
+  zoneName: string
+  humidity: number
+  ec: number
+  ph: number
+  temperature: number
+  timestamp: string
+}
+
+export interface WeatherData {
+  temperature: number
+  humidity: number
+  windSpeed: number
+  rainfall: number
+  light: number
+  timestamp: string
+}
+
+export interface DeviceStatus {
+  deviceId: string
+  deviceCode: string
+  name: string
+  type: string
+  status: 'online' | 'offline'
+  lastHeartbeat?: string
+  zoneId?: string
+}
+
+export interface MapZone {
+  id: string
+  name: string
+  x: number
+  y: number
+  width: number
+  height: number
+  status: 'normal' | 'warning' | 'error' | 'irrigation'
+  devices: MapDevice[]
+}
+
+export interface MapDevice {
+  id: string
+  name: string
+  type: 'valve' | 'sensor' | 'pump'
+  x: number
+  y: number
+  status: 'online' | 'offline'
+  isOpen?: boolean
+}
+
+export interface GanttTask {
+  id: string
+  name: string
+  start: string
+  end: string
+  progress: number
+  zoneId: string
+  status: 'pending' | 'running' | 'completed' | 'cancelled'
+}

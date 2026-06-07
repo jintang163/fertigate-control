@@ -9,46 +9,108 @@
         theme="dark"
         mode="inline"
         v-model:selectedKeys="selectedKeys"
+        v-model:openKeys="openKeys"
         @click="handleMenuClick"
       >
-        <a-menu-item key="/dashboard">
-          <DashboardOutlined />
-          <span>监控总览</span>
-        </a-menu-item>
-        <a-menu-item key="/realtime">
-          <MonitorOutlined />
-          <span>实时监控</span>
-        </a-menu-item>
-        <a-menu-item key="/devices">
-          <SettingOutlined />
-          <span>设备管理</span>
-        </a-menu-item>
-        <a-menu-item key="/irrigation">
-          <ControlOutlined />
-          <span>灌溉控制</span>
-        </a-menu-item>
-        <a-menu-item key="/crops">
-          <SmileOutlined />
-          <span>作物管理</span>
-        </a-menu-item>
-        <a-menu-item key="/zones">
-          <AppstoreOutlined />
-          <span>区域管理</span>
-        </a-menu-item>
-        <a-menu-item key="/alerts">
-          <BellOutlined>
-            <a-badge :count="alertCount" :number-style="{ backgroundColor: '#ff4d4f' }" />
-          </BellOutlined>
-          <span>告警中心</span>
-        </a-menu-item>
-        <a-menu-item key="/records">
-          <FileTextOutlined />
-          <span>灌溉记录</span>
-        </a-menu-item>
-        <a-menu-item key="/settings">
-          <ToolOutlined />
-          <span>系统设置</span>
-        </a-menu-item>
+        <a-sub-menu key="monitor">
+          <template #icon>
+            <DesktopOutlined />
+          </template>
+          <template #title>监控中心</template>
+          <a-menu-item key="/monitor-screen">
+            <MonitorOutlined />
+            <span>监控大屏</span>
+          </a-menu-item>
+          <a-menu-item key="/monitor-dashboard">
+            <DashboardOutlined />
+            <span>监控总览</span>
+          </a-menu-item>
+          <a-menu-item key="/realtime">
+            <BarChartOutlined />
+            <span>实时监控</span>
+          </a-menu-item>
+          <a-menu-item key="/history-trends">
+            <LineChartOutlined />
+            <span>历史趋势</span>
+          </a-menu-item>
+        </a-sub-menu>
+
+        <a-sub-menu key="map">
+          <template #icon>
+            <EnvironmentOutlined />
+          </template>
+          <template #title>灌区地图</template>
+          <a-menu-item key="/zone-map">
+            <ApartmentOutlined />
+            <span>平面分布</span>
+          </a-menu-item>
+        </a-sub-menu>
+
+        <a-sub-menu key="control">
+          <template #icon>
+            <ControlOutlined />
+          </template>
+          <template #title>控制管理</template>
+          <a-menu-item key="/manual-control">
+            <ThunderboltOutlined />
+            <span>手动控制</span>
+          </a-menu-item>
+          <a-menu-item key="/threshold-config">
+            <SlidersOutlined />
+            <span>阈值策略</span>
+          </a-menu-item>
+          <a-menu-item key="/rotation-plan">
+            <CalendarOutlined />
+            <span>轮灌计划</span>
+          </a-menu-item>
+        </a-sub-menu>
+
+        <a-sub-menu key="alert">
+          <template #icon>
+            <BellOutlined />
+          </template>
+          <template #title>告警管理</template>
+          <a-menu-item key="/alert-list">
+            <BellOutlined>
+              <a-badge :count="alertCount" :number-style="{ backgroundColor: '#ff4d4f' }" />
+            </BellOutlined>
+            <span>告警列表</span>
+          </a-menu-item>
+        </a-sub-menu>
+
+        <a-sub-menu key="record">
+          <template #icon>
+            <FileTextOutlined />
+          </template>
+          <template #title>数据记录</template>
+          <a-menu-item key="/fertigation-ledger">
+            <FileExcelOutlined />
+            <span>灌肥台账</span>
+          </a-menu-item>
+        </a-sub-menu>
+
+        <a-sub-menu key="config">
+          <template #icon>
+            <SettingOutlined />
+          </template>
+          <template #title>系统配置</template>
+          <a-menu-item key="/devices">
+            <ToolOutlined />
+            <span>设备管理</span>
+          </a-menu-item>
+          <a-menu-item key="/crops">
+            <SmileOutlined />
+            <span>作物管理</span>
+          </a-menu-item>
+          <a-menu-item key="/zones">
+            <AppstoreOutlined />
+            <span>区域管理</span>
+          </a-menu-item>
+          <a-menu-item key="/settings">
+            <SettingOutlined />
+            <span>系统设置</span>
+          </a-menu-item>
+        </a-sub-menu>
       </a-menu>
     </a-layout-sider>
     <a-layout>
@@ -93,6 +155,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import { useAppStore } from '@/stores'
 import { storeToRefs } from 'pinia'
+import {
+  DesktopOutlined,
+  LineChartOutlined,
+  BarChartOutlined,
+  EnvironmentOutlined,
+  ApartmentOutlined,
+  SlidersOutlined,
+  CalendarOutlined,
+  FileExcelOutlined
+} from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,7 +173,25 @@ const { unacknowledgedAlerts, controlStatus } = storeToRefs(appStore)
 
 const collapsed = ref(false)
 const selectedKeys = ref<string[]>([])
+const openKeys = ref<string[]>(['monitor'])
 const emergencyLoading = ref(false)
+
+const pathToMenuMap: Record<string, string> = {
+  '/monitor-screen': 'monitor',
+  '/monitor-dashboard': 'monitor',
+  '/realtime': 'monitor',
+  '/history-trends': 'monitor',
+  '/zone-map': 'map',
+  '/manual-control': 'control',
+  '/threshold-config': 'control',
+  '/rotation-plan': 'control',
+  '/alert-list': 'alert',
+  '/fertigation-ledger': 'record',
+  '/devices': 'config',
+  '/crops': 'config',
+  '/zones': 'config',
+  '/settings': 'config'
+}
 
 const alertCount = computed(() => unacknowledgedAlerts.value.length)
 const controlMode = computed(() => controlStatus.value?.controlMode || 'auto')
@@ -138,6 +228,10 @@ function handleEmergencyStop() {
 
 watch(() => route.path, (newPath) => {
   selectedKeys.value = [newPath]
+  const menuKey = pathToMenuMap[newPath]
+  if (menuKey && !openKeys.value.includes(menuKey)) {
+    openKeys.value = [menuKey]
+  }
 }, { immediate: true })
 
 onMounted(async () => {

@@ -10,14 +10,21 @@ import {
   LineChart,
   BarChart,
   GaugeChart,
-  PieChart
+  PieChart,
+  ScatterChart,
+  HeatmapChart,
+  CustomChart
 } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  ToolboxComponent
+  ToolboxComponent,
+  VisualMapComponent,
+  DataZoomComponent,
+  GraphicComponent,
+  CalendarComponent
 } from 'echarts/components'
 
 import App from './App.vue'
@@ -30,11 +37,18 @@ use([
   BarChart,
   GaugeChart,
   PieChart,
+  ScatterChart,
+  HeatmapChart,
+  CustomChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  ToolboxComponent
+  ToolboxComponent,
+  VisualMapComponent,
+  DataZoomComponent,
+  GraphicComponent,
+  CalendarComponent
 ])
 
 const app = createApp(App)
