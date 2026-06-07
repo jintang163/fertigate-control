@@ -112,6 +112,7 @@ public class DeviceController {
     }
 
     @PutMapping("/valve/{id}/auto")
+    @OperationLog(operation = "阀门自动控制切换", type = OperationLog.OperationType.CONTROL, targetType = "valve")
     public ResponseEntity<Valve> setValveAutoControl(
             @PathVariable UUID id,
             @RequestParam boolean autoControl) {
@@ -179,6 +180,7 @@ public class DeviceController {
     }
 
     @PostMapping("/interlock/{key}/acknowledge")
+    @OperationLog(operation = "确认联锁", type = OperationLog.OperationType.ACKNOWLEDGE, targetType = "interlock")
     public ResponseEntity<Map<String, Object>> acknowledgeInterlock(@PathVariable String key) {
         boolean success = safetyInterlockService.acknowledgeInterlock(key);
         return ResponseEntity.ok(Map.of(
@@ -188,6 +190,7 @@ public class DeviceController {
     }
 
     @PutMapping("/interlock/enabled")
+    @OperationLog(operation = "联锁开关控制", type = OperationLog.OperationType.CONTROL, targetType = "interlock")
     public ResponseEntity<Map<String, Object>> setInterlockEnabled(@RequestParam boolean enabled) {
         safetyInterlockService.setInterlockEnabled(enabled);
         return ResponseEntity.ok(Map.of(

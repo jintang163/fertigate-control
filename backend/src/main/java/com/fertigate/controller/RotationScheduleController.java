@@ -54,6 +54,7 @@ public class RotationScheduleController {
     }
 
     @PostMapping("/generate")
+    @OperationLog(operation = "自动生成轮灌计划", type = OperationLog.OperationType.CREATE, targetType = "rotation_schedule")
     public ResponseEntity<List<RotationScheduleDTO>> generateRotationPlan(
             @RequestParam UUID zoneId,
             @RequestParam(defaultValue = "irrigation") String irrigationType,
@@ -72,6 +73,7 @@ public class RotationScheduleController {
     }
 
     @PutMapping("/{id}/active")
+    @OperationLog(operation = "轮灌计划状态控制", type = OperationLog.OperationType.CONTROL, targetType = "rotation_schedule")
     public ResponseEntity<RotationScheduleDTO> setScheduleActive(
             @PathVariable UUID id,
             @RequestParam boolean active) {
@@ -81,6 +83,7 @@ public class RotationScheduleController {
     }
 
     @PostMapping("/{id}/execute")
+    @OperationLog(operation = "立即执行轮灌", type = OperationLog.OperationType.CONTROL, targetType = "rotation_schedule")
     public ResponseEntity<RotationExecutionDTO> executeScheduleNow(@PathVariable UUID id) {
         RotationExecutionDTO execution = rotationScheduleService.executeRotationNow(id);
         if (execution != null) {

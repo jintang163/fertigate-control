@@ -25,7 +25,7 @@
             <a-select-option value="OFFLINE">离线</a-select-option>
             <a-select-option value="FAULT">故障</a-select-option>
           </a-select>
-          <a-button type="primary" @click="addDevice">
+          <a-button v-if="hasPermission('device:manage')" type="primary" @click="addDevice">
             <PlusOutlined />
             添加设备
           </a-button>
@@ -59,15 +59,17 @@
               <a-button type="link" @click="viewDevice(record)">
                 查看
               </a-button>
-              <a-button type="link" @click="editDevice(record)">
-                编辑
-              </a-button>
-              <a-popconfirm
-                title="确认删除此设备？"
-                @confirm="deleteDevice(record.id)"
-              >
-                <a-button type="link" danger>删除</a-button>
-              </a-popconfirm>
+              <template v-if="hasPermission('device:manage')">
+                <a-button type="link" @click="editDevice(record)">
+                  编辑
+                </a-button>
+                <a-popconfirm
+                  title="确认删除此设备？"
+                  @confirm="deleteDevice(record.id)"
+                >
+                  <a-button type="link" danger>删除</a-button>
+                </a-popconfirm>
+              </template>
             </a-space>
           </template>
         </template>
@@ -177,6 +179,8 @@ import type { Device, DeviceType, DeviceStatus } from '@/types'
 
 const appStore = useAppStore()
 const { devices, loading } = storeToRefs(appStore)
+const hasPermission = appStore.hasPermission
+const hasAnyRole = appStore.hasAnyRole
 
 const deviceTypeFilter = ref<DeviceType | undefined>()
 const statusFilter = ref<DeviceStatus | undefined>()

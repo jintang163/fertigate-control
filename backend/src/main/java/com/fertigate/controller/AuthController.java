@@ -20,7 +20,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    @OperationLog(operation = "用户登录", type = OperationLog.OperationType.LOGIN, description = "用户登录系统")
+    @OperationLog(operation = "用户登录", type = OperationLog.OperationType.LOGIN, description = "用户登录系统", recordParams = false)
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
     }

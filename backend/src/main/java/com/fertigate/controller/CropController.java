@@ -1,6 +1,8 @@
 package com.fertigate.controller;
 
+import com.fertigate.annotation.OperationLog;
 import com.fertigate.entity.Crop;
+import com.fertigate.entity.OperationLog;
 import com.fertigate.repository.CropRepository;
 import com.fertigate.service.CropGrowthModelService;
 import lombok.RequiredArgsConstructor;
@@ -39,12 +41,14 @@ public class CropController {
     }
 
     @PostMapping
+    @OperationLog(operation = "创建作物", type = OperationLog.OperationType.CREATE, targetType = "crop")
     public ResponseEntity<Crop> createCrop(@RequestBody Crop crop) {
         Crop saved = cropRepository.save(crop);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
+    @OperationLog(operation = "更新作物", type = OperationLog.OperationType.UPDATE, targetType = "crop")
     public ResponseEntity<Crop> updateCrop(@PathVariable UUID id, @RequestBody Crop crop) {
         return cropRepository.findById(id)
                 .map(existing -> {
@@ -56,6 +60,7 @@ public class CropController {
     }
 
     @DeleteMapping("/{id}")
+    @OperationLog(operation = "删除作物", type = OperationLog.OperationType.DELETE, targetType = "crop")
     public ResponseEntity<Void> deleteCrop(@PathVariable UUID id) {
         if (!cropRepository.existsById(id)) {
             return ResponseEntity.notFound().build();

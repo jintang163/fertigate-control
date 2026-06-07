@@ -3,7 +3,7 @@
     <div class="card-container">
       <div class="page-header">
         <span class="page-title">轮灌计划管理</span>
-        <a-space>
+        <a-space v-if="hasPermission('rotation:manage')">
           <a-button @click="handleGeneratePlan">
             <MagicOutlined />
             智能生成
@@ -117,13 +117,14 @@
               </template>
               <template v-else-if="column.key === 'isActive'">
                 <a-switch
+                  v-if="hasPermission('rotation:manage')"
                   :checked="record.isActive"
                   :loading="loadingMap[record.id]"
                   @change="(checked) => handleToggleActive(record, checked)"
                 />
               </template>
               <template v-else-if="column.key === 'action'">
-                <a-space>
+                <a-space v-if="hasPermission('rotation:manage')">
                   <a-button type="link" size="small" @click="handleEdit(record)">
                     编辑
                   </a-button>
@@ -428,6 +429,11 @@ import {
 } from '@ant-design/icons-vue'
 import { rotationApi, thresholdApi, zoneApi } from '@/api'
 import type { RotationSchedule, ThresholdStrategy, Zone, GanttTask } from '@/types'
+import { useAppStore } from '@/stores'
+
+const store = useAppStore()
+const hasPermission = store.hasPermission
+const hasAnyRole = store.hasAnyRole
 
 const loading = ref(false)
 const submitting = ref(false)

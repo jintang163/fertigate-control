@@ -3,7 +3,7 @@
     <div class="card-container">
       <div class="page-header">
         <span class="page-title">区域管理</span>
-        <a-button type="primary" @click="addZone">
+        <a-button v-if="hasPermission('zone:manage')" type="primary" @click="addZone">
           <PlusOutlined />
           添加区域
         </a-button>
@@ -32,7 +32,7 @@
             {{ record.minHumidity }}% - {{ record.maxHumidity }}%
           </template>
           <template v-else-if="column.key === 'action'">
-            <a-space>
+            <a-space v-if="hasPermission('zone:manage')">
               <a-button type="link" @click="editZone(record)">编辑</a-button>
               <a-popconfirm
                 title="确认删除此区域？"
@@ -167,6 +167,8 @@ import { PlusOutlined } from '@ant-design/icons-vue'
 
 const appStore = useAppStore()
 const { zones, crops, loading } = storeToRefs(appStore)
+const hasPermission = appStore.hasPermission
+const hasAnyRole = appStore.hasAnyRole
 
 const modalVisible = ref(false)
 const isEdit = ref(false)

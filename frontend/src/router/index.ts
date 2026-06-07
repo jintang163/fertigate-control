@@ -17,85 +17,85 @@ const routes: RouteRecordRaw[] = [
     path: '/monitor-screen',
     name: 'MonitorScreen',
     component: () => import('@/views/MonitorScreen.vue'),
-    meta: { title: '监控大屏', icon: 'DesktopOutlined' }
+    meta: { title: '监控大屏', icon: 'DesktopOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/monitor-dashboard',
     name: 'MonitorDashboard',
     component: () => import('@/views/Dashboard.vue'),
-    meta: { title: '监控总览', icon: 'DashboardOutlined' }
+    meta: { title: '监控总览', icon: 'DashboardOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/realtime',
     name: 'Realtime',
     component: () => import('@/views/RealtimeMonitor.vue'),
-    meta: { title: '实时监控', icon: 'MonitorOutlined' }
+    meta: { title: '实时监控', icon: 'MonitorOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/history-trends',
     name: 'HistoryTrends',
     component: () => import('@/views/HistoryTrends.vue'),
-    meta: { title: '历史趋势', icon: 'LineChartOutlined' }
+    meta: { title: '历史趋势', icon: 'LineChartOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/zone-map',
     name: 'ZoneMap',
     component: () => import('@/views/MonitorScreen.vue'),
-    meta: { title: '灌区地图', icon: 'EnvironmentOutlined' }
+    meta: { title: '灌区地图', icon: 'EnvironmentOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/threshold-config',
     name: 'ThresholdConfig',
     component: () => import('@/views/ThresholdConfig.vue'),
-    meta: { title: '阈值策略', icon: 'SlidersOutlined' }
+    meta: { title: '阈值策略', icon: 'SlidersOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/rotation-plan',
     name: 'RotationPlan',
     component: () => import('@/views/RotationPlan.vue'),
-    meta: { title: '轮灌计划', icon: 'CalendarOutlined' }
+    meta: { title: '轮灌计划', icon: 'CalendarOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/manual-control',
     name: 'ManualControl',
     component: () => import('@/views/ManualControl.vue'),
-    meta: { title: '手动控制', icon: 'ControlOutlined' }
+    meta: { title: '手动控制', icon: 'ControlOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/alert-list',
     name: 'AlertList',
     component: () => import('@/views/AlertCenter.vue'),
-    meta: { title: '告警中心', icon: 'BellOutlined' }
+    meta: { title: '告警中心', icon: 'BellOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/fertigation-ledger',
     name: 'FertigationLedger',
     component: () => import('@/views/FertigationLedger.vue'),
-    meta: { title: '灌肥台账', icon: 'FileExcelOutlined' }
+    meta: { title: '灌肥台账', icon: 'FileExcelOutlined', roles: ['admin', 'operator', 'viewer'] }
   },
   {
     path: '/devices',
     name: 'Devices',
     component: () => import('@/views/DeviceManagement.vue'),
-    meta: { title: '设备管理', icon: 'SettingOutlined' }
+    meta: { title: '设备管理', icon: 'SettingOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/crops',
     name: 'Crops',
     component: () => import('@/views/CropManagement.vue'),
-    meta: { title: '作物管理', icon: 'SmileOutlined' }
+    meta: { title: '作物管理', icon: 'SmileOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/zones',
     name: 'Zones',
     component: () => import('@/views/ZoneManagement.vue'),
-    meta: { title: '区域管理', icon: 'AppstoreOutlined' }
+    meta: { title: '区域管理', icon: 'AppstoreOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/SystemSettings.vue'),
-    meta: { title: '系统设置', icon: 'ToolOutlined' }
+    meta: { title: '系统设置', icon: 'ToolOutlined', roles: ['admin', 'operator'] }
   },
   {
     path: '/user-management',

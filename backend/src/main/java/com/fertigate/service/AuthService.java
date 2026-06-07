@@ -105,25 +105,30 @@ public class AuthService {
         Map<String, String[]> allPermissions = new LinkedHashMap<>();
         allPermissions.put("user:view", new String[]{"用户查看", "/user/**", "GET"});
         allPermissions.put("user:manage", new String[]{"用户管理", "/user/**", "POST,PUT,DELETE"});
-        allPermissions.put("role:view", new String[]{"角色查看", "/role/**", "GET"});
-        allPermissions.put("role:manage", new String[]{"角色管理", "/role/**", "POST,PUT,DELETE"});
-        allPermissions.put("log:view", new String[]{"日志查看", "/operation-log/**", "GET"});
+        allPermissions.put("role:view", new String[]{"角色查看", "/user/roles", "GET"});
+        allPermissions.put("log:view", new String[]{"日志查看", "/operation-log/**", "GET,DELETE"});
+        allPermissions.put("auth:manage", new String[]{"认证管理", "/auth/logout,/auth/userinfo,/auth/permissions", "POST,GET"});
         allPermissions.put("zone:view", new String[]{"灌区查看", "/zone/**", "GET"});
         allPermissions.put("zone:manage", new String[]{"灌区管理", "/zone/**", "POST,PUT,DELETE"});
         allPermissions.put("device:view", new String[]{"设备查看", "/device/**", "GET"});
         allPermissions.put("device:manage", new String[]{"设备管理", "/device/**", "POST,PUT,DELETE"});
-        allPermissions.put("crop:view", new String[]{"作物查看", "/crop/**", "GET"});
-        allPermissions.put("crop:manage", new String[]{"作物管理", "/crop/**", "POST,PUT,DELETE"});
+        allPermissions.put("crop:view", new String[]{"作物查看", "/crop/**,/growth-stage/**", "GET"});
+        allPermissions.put("crop:manage", new String[]{"作物管理", "/crop/**,/growth-stage/**", "POST,PUT,DELETE"});
         allPermissions.put("threshold:view", new String[]{"阈值查看", "/threshold/**", "GET"});
         allPermissions.put("threshold:manage", new String[]{"阈值管理", "/threshold/**", "POST,PUT,DELETE"});
         allPermissions.put("rotation:view", new String[]{"轮灌查看", "/rotation/**", "GET"});
         allPermissions.put("rotation:manage", new String[]{"轮灌管理", "/rotation/**", "POST,PUT,DELETE"});
+        allPermissions.put("irrigation:view", new String[]{"灌溉查看", "/irrigation/**", "GET"});
         allPermissions.put("irrigation:control", new String[]{"灌溉控制", "/irrigation/**,/manual/**", "POST,PUT"});
         allPermissions.put("alert:view", new String[]{"告警查看", "/alert/**", "GET"});
-        allPermissions.put("alert:acknowledge", new String[]{"告警确认", "/alert/**/acknowledge", "POST"});
+        allPermissions.put("alert:acknowledge", new String[]{"告警确认", "/alert/**/acknowledge,/alert/acknowledge-all", "POST,PUT"});
         allPermissions.put("record:view", new String[]{"记录查看", "/fertigation/**,/irrigation/**", "GET"});
         allPermissions.put("record:export", new String[]{"记录导出", "/fertigation/**/export", "GET"});
-        allPermissions.put("monitor:view", new String[]{"监控查看", "/monitor/**", "GET"});
+        allPermissions.put("record:manage", new String[]{"记录管理", "/fertigation/**,/irrigation/**", "POST,PUT,DELETE"});
+        allPermissions.put("monitor:view", new String[]{"监控查看", "/monitor/**,/dashboard/**", "GET"});
+        allPermissions.put("sensor:view", new String[]{"传感器查看", "/sensor/**", "GET"});
+        allPermissions.put("pump:manage", new String[]{"水泵管理", "/pump/**", "POST,PUT,DELETE"});
+        allPermissions.put("pump:view", new String[]{"水泵查看", "/pump/**", "GET"});
 
         Map<String, SysPermission> permissionMap = new HashMap<>();
         for (Map.Entry<String, String[]> entry : allPermissions.entrySet()) {
@@ -161,12 +166,14 @@ public class AuthService {
                     break;
                 case "operator":
                     permissionMap.entrySet().stream()
-                            .filter(e -> !e.getKey().contains("user:") && !e.getKey().contains("role:"))
+                            .filter(e -> !e.getKey().startsWith("user:") && !e.getKey().startsWith("role:"))
                             .forEach(e -> perms.add(e.getValue()));
                     break;
                 case "viewer":
                     permissionMap.entrySet().stream()
-                            .filter(e -> e.getKey().endsWith(":view") || e.getKey().equals("monitor:view"))
+                            .filter(e -> e.getKey().endsWith(":view") 
+                                    || e.getKey().equals("auth:manage")
+                                    || e.getKey().equals("monitor:view"))
                             .forEach(e -> perms.add(e.getValue()));
                     break;
             }

@@ -55,7 +55,7 @@
                   (开: {{ getZoneOpenValveCount(zone.id) }})
                 </span>
               </div>
-              <div class="zone-actions">
+              <div class="zone-actions" v-if="hasPermission('irrigation:control')">
                 <a-button
                   type="primary"
                   size="small"
@@ -173,26 +173,28 @@
                 <a-select-option value="closed">关闭</a-select-option>
               </a-select>
               
-              <a-button
-                type="primary"
-                :disabled="selectedValveIds.length === 0"
-                @click="batchOpenValves"
-              >
-                <PlayCircleOutlined /> 批量开启
-              </a-button>
-              <a-button
-                danger
-                :disabled="selectedValveIds.length === 0"
-                @click="batchCloseValves"
-              >
-                <StopOutlined /> 批量关闭
-              </a-button>
-              <a-button
-                :disabled="selectedValveIds.length === 0"
-                @click="batchSetAuto"
-              >
-                <SettingOutlined /> 批量设为自动
-              </a-button>
+              <template v-if="hasPermission('irrigation:control')">
+                <a-button
+                  type="primary"
+                  :disabled="selectedValveIds.length === 0"
+                  @click="batchOpenValves"
+                >
+                  <PlayCircleOutlined /> 批量开启
+                </a-button>
+                <a-button
+                  danger
+                  :disabled="selectedValveIds.length === 0"
+                  @click="batchCloseValves"
+                >
+                  <StopOutlined /> 批量关闭
+                </a-button>
+                <a-button
+                  :disabled="selectedValveIds.length === 0"
+                  @click="batchSetAuto"
+                >
+                  <SettingOutlined /> 批量设为自动
+                </a-button>
+              </template>
             </a-space>
           </div>
           
@@ -238,6 +240,7 @@
               
               <template v-else-if="column.key === 'autoControl'">
                 <a-switch
+                  v-if="hasPermission('irrigation:control')"
                   :checked="record.autoControl"
                   :disabled="controlMode === 'auto'"
                   size="small"
@@ -248,7 +251,7 @@
               </template>
               
               <template v-else-if="column.key === 'action'">
-                <a-space size="small">
+                <a-space size="small" v-if="hasPermission('irrigation:control')">
                   <a-button
                     v-if="!record.isOpen"
                     type="primary"
@@ -289,6 +292,7 @@
               </a-tag>
             </div>
             <a-switch
+              v-if="hasPermission('irrigation:control')"
               :checked="controlMode === 'auto'"
               checked-children="自动"
               un-checked-children="手动"
@@ -315,6 +319,7 @@
           />
           
           <a-button
+            v-if="hasPermission('irrigation:control')"
             danger
             size="large"
             block
@@ -385,9 +390,14 @@ import { GaugeChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import type { Valve, Zone, ControlStatus, IrrigationDecision, ZoneSensorData } from '@/types'
 import { irrigationApi, deviceApi, zoneApi, sensorApi, monitorApi } from '@/api'
+import { useAppStore } from '@/stores'
 import dayjs from 'dayjs'
 
 use([GaugeChart, CanvasRenderer])
+
+const store = useAppStore()
+const hasPermission = store.hasPermission
+const hasAnyRole = store.hasAnyRole
 
 interface OperationLog {
   type: 'open' | 'close' | 'mode' | 'emergency' | 'auto'

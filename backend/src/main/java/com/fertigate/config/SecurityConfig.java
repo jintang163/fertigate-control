@@ -28,6 +28,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final DynamicAuthorizationManager dynamicAuthorizationManager;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -38,31 +39,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/login",
-                                "/auth/logout",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/actuator/**",
-                                "/ws/**",
-                                "/monitor/**",
-                                "/dashboard/**",
-                                "/zone/**",
-                                "/device/**",
-                                "/crop/**",
-                                "/sensor/**",
-                                "/alert/**",
-                                "/threshold/**",
-                                "/rotation/**",
-                                "/irrigation/**",
-                                "/fertigation/**",
-                                "/manual/**",
-                                "/growth-stage/**",
-                                "/pump/**",
-                                "/user/**",
-                                "/auth/**",
-                                "/operation-log/**"
+                                "/actuator/health",
+                                "/actuator/info",
+                                "/ws/**"
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().access(dynamicAuthorizationManager)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

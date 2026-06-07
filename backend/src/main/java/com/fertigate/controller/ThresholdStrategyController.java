@@ -73,6 +73,7 @@ public class ThresholdStrategyController {
     }
 
     @PutMapping("/{id}/active")
+    @OperationLog(operation = "阈值策略状态控制", type = OperationLog.OperationType.CONTROL, targetType = "threshold_strategy")
     public ResponseEntity<ThresholdStrategyDTO> setStrategyActive(
             @PathVariable UUID id,
             @RequestParam boolean active) {
@@ -91,6 +92,7 @@ public class ThresholdStrategyController {
     }
 
     @PostMapping("/check/{zoneId}")
+    @OperationLog(operation = "阈值检查", type = OperationLog.OperationType.QUERY, targetType = "threshold_strategy")
     public ResponseEntity<Map<String, Object>> checkThresholds(
             @PathVariable UUID zoneId,
             @RequestBody Map<String, Double> sensorData) {

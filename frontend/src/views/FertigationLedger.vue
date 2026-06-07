@@ -87,7 +87,7 @@
               <ReloadOutlined />
               重置
             </a-button>
-            <a-button type="primary" :disabled="exporting" @click="handleExport">
+            <a-button v-if="hasPermission('record:export')" type="primary" :disabled="exporting" @click="handleExport">
               <DownloadOutlined />
               导出Excel
             </a-button>
@@ -330,6 +330,11 @@ import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 import { fertigationApi, zoneApi } from '@/api'
 import type { FertigationRecord, Zone } from '@/types'
+import { useAppStore } from '@/stores'
+
+const store = useAppStore()
+const hasPermission = store.hasPermission
+const hasAnyRole = store.hasAnyRole
 
 interface FilterForm {
   zoneIds: string[]

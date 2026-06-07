@@ -3,7 +3,7 @@
     <div class="card-container">
       <div class="page-header">
         <span class="page-title">阈值策略配置</span>
-        <a-button type="primary" @click="addStrategy">
+        <a-button v-if="hasPermission('threshold:manage')" type="primary" @click="addStrategy">
           <PlusOutlined />
           新增策略
         </a-button>
@@ -84,7 +84,7 @@
             </a-tag>
           </template>
           <template v-else-if="column.key === 'action'">
-            <a-space>
+            <a-space v-if="hasPermission('threshold:manage')">
               <a-button type="link" @click="editStrategy(record)">编辑</a-button>
               <a-popconfirm
                 :title="record.isActive ? '确认禁用此策略？' : '确认启用此策略？'"
@@ -277,6 +277,11 @@ import { message } from 'ant-design-vue'
 import { thresholdApi, zoneApi, cropApi } from '@/api'
 import type { ThresholdStrategy, Zone, Crop } from '@/types'
 import { PlusOutlined } from '@ant-design/icons-vue'
+import { useAppStore } from '@/stores'
+
+const store = useAppStore()
+const hasPermission = store.hasPermission
+const hasAnyRole = store.hasAnyRole
 
 const loading = ref(false)
 const submitting = ref(false)

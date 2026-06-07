@@ -12,7 +12,7 @@
         v-model:openKeys="openKeys"
         @click="handleMenuClick"
       >
-        <a-sub-menu key="monitor">
+        <a-sub-menu key="monitor" v-if="canViewAll">
           <template #icon>
             <DesktopOutlined />
           </template>
@@ -35,7 +35,7 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="map">
+        <a-sub-menu key="map" v-if="canViewAll">
           <template #icon>
             <EnvironmentOutlined />
           </template>
@@ -46,7 +46,7 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="control">
+        <a-sub-menu key="control" v-if="canManage">
           <template #icon>
             <ControlOutlined />
           </template>
@@ -65,7 +65,7 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="alert">
+        <a-sub-menu key="alert" v-if="canViewAll">
           <template #icon>
             <BellOutlined />
           </template>
@@ -78,7 +78,7 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="record">
+        <a-sub-menu key="record" v-if="canViewAll">
           <template #icon>
             <FileTextOutlined />
           </template>
@@ -89,24 +89,24 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="config">
+        <a-sub-menu key="config" v-if="canManage || isAdmin">
           <template #icon>
             <SettingOutlined />
           </template>
           <template #title>系统配置</template>
-          <a-menu-item key="/devices">
+          <a-menu-item key="/devices" v-if="canManage">
             <ToolOutlined />
             <span>设备管理</span>
           </a-menu-item>
-          <a-menu-item key="/crops">
+          <a-menu-item key="/crops" v-if="canManage">
             <SmileOutlined />
             <span>作物管理</span>
           </a-menu-item>
-          <a-menu-item key="/zones">
+          <a-menu-item key="/zones" v-if="canManage">
             <AppstoreOutlined />
             <span>区域管理</span>
           </a-menu-item>
-          <a-menu-item key="/settings">
+          <a-menu-item key="/settings" v-if="canManage">
             <SettingOutlined />
             <span>系统设置</span>
           </a-menu-item>
@@ -132,6 +132,7 @@
               {{ controlMode === 'auto' ? '自动模式' : '手动模式' }}
             </a-tag>
             <a-button 
+              v-if="canControl"
               danger 
               type="primary" 
               @click="handleEmergencyStop"
@@ -194,23 +195,38 @@ import { message, Modal } from 'ant-design-vue'
 import { useAppStore } from '@/stores'
 import { storeToRefs } from 'pinia'
 import {
+  WaterToolOutlined,
   DesktopOutlined,
+  MonitorOutlined,
+  DashboardOutlined,
   LineChartOutlined,
   BarChartOutlined,
   EnvironmentOutlined,
   ApartmentOutlined,
+  ControlOutlined,
+  ThunderboltOutlined,
   SlidersOutlined,
   CalendarOutlined,
+  BellOutlined,
+  FileTextOutlined,
   FileExcelOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  SmileOutlined,
+  AppstoreOutlined,
   UserOutlined,
   DownOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  StopOutlined
 } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-const { unacknowledgedAlerts, controlStatus, currentUser, isAdmin, isOperator } = storeToRefs(appStore)
+const { unacknowledgedAlerts, controlStatus, currentUser, isAdmin, isOperator, isViewer } = storeToRefs(appStore)
+const canControl = appStore.hasPermission('irrigation:control')
+const canViewAll = appStore.hasAnyRole(['admin', 'operator', 'viewer'])
+const canManage = appStore.hasAnyRole(['admin', 'operator'])
 
 const collapsed = ref(false)
 const selectedKeys = ref<string[]>([])

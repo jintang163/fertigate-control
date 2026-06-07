@@ -3,7 +3,7 @@
     <div class="card-container">
       <div class="page-header">
         <span class="page-title">作物管理</span>
-        <a-button type="primary" @click="addCrop">
+        <a-button v-if="hasPermission('crop:manage')" type="primary" @click="addCrop">
           <PlusOutlined />
           添加作物
         </a-button>
@@ -26,7 +26,7 @@
             {{ record.minOptimalHumidity }}% - {{ record.maxOptimalHumidity }}%
           </template>
           <template v-else-if="column.key === 'action'">
-            <a-space>
+            <a-space v-if="hasPermission('crop:manage')">
               <a-button type="link" @click="editCrop(record)">编辑</a-button>
               <a-popconfirm
                 title="确认删除此作物？"
@@ -174,6 +174,8 @@ import dayjs from 'dayjs'
 
 const appStore = useAppStore()
 const { crops, loading } = storeToRefs(appStore)
+const hasPermission = appStore.hasPermission
+const hasAnyRole = appStore.hasAnyRole
 
 const modalVisible = ref(false)
 const isEdit = ref(false)

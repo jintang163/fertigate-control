@@ -23,7 +23,7 @@
             <a-select-option :value="true">已处理</a-select-option>
             <a-select-option :value="false">未处理</a-select-option>
           </a-select>
-          <a-button type="primary" @click="acknowledgeAll" :disabled="unacknowledgedCount === 0">
+          <a-button v-if="hasPermission('alert:acknowledge')" type="primary" @click="acknowledgeAll" :disabled="unacknowledgedCount === 0">
             <CheckOutlined />
             全部处理
           </a-button>
@@ -114,7 +114,7 @@
                       {{ item.acknowledged ? '已处理' : '未处理' }}
                     </a-tag>
                     <a-button
-                      v-if="!item.acknowledged"
+                      v-if="!item.acknowledged && hasPermission('alert:acknowledge')"
                       type="primary"
                       size="small"
                       @click="acknowledgeAlert(item.id)"
@@ -152,6 +152,8 @@ import {
 
 const appStore = useAppStore()
 const { alerts, loading } = storeToRefs(appStore)
+const hasPermission = appStore.hasPermission
+const hasAnyRole = appStore.hasAnyRole
 
 const levelFilter = ref<AlertLevel | undefined>()
 const acknowledgedFilter = ref<boolean | undefined>()
