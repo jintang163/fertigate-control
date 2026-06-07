@@ -3,15 +3,22 @@ package com.fertigate.controller;
 import com.fertigate.dto.FertigationRecordDTO;
 import com.fertigate.service.FertigationRecordService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/fertigation")
 @RequiredArgsConstructor
@@ -72,6 +79,37 @@ public class FertigationRecordController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
         
         return ResponseEntity.ok(fertigationRecordService.getStatistics(zoneId, startTime, endTime));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportToExcel(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(required = false) UUID zoneId) {
+
+        log.info("Received Excel export request, startTime: {}, endTime: {}, zoneId: {}", startTime, endTime, zoneId);
+
+        try {
+            byte[] excelData = fertigationRecordService.exportToExcel(startTime, endTime, zoneId);
+
+            DateTimeFormatter fileNameFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+            String startDateStr = startTime != null ? startTime.format(fileNameFormatter) : "all";
+            String endDateStr = endTime != null ? endTime.format(fileNameFormatter) : "all";
+            String fileName = "灌肥台账_" + startDateStr + "_" + endDateStr + ".xlsx";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+            headers.setContentDispositionFormData("attachment", encodedFileName);
+
+            log.info("Excel export successful, fileName: {}, fileSize: {} bytes", fileName, excelData.length);
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(excelData);
+        } catch (Exception e) {
+            log.error("Excel export failed", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping

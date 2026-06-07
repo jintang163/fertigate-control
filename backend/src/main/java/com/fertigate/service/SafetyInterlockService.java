@@ -61,6 +61,10 @@ public class SafetyInterlockService {
      * InfluxDB服务，用于读取实时传感器数据
      */
     private final InfluxDBService influxDBService;
+    /**
+     * WebSocket告警推送服务
+     */
+    private final AlertWebSocketService alertWebSocketService;
 
     /**
      * 安全联锁总开关，可通过配置文件开启/关闭
@@ -329,7 +333,9 @@ public class SafetyInterlockService {
             alert.setThresholdValue(new BigDecimal(thresholdValue));
         }
         alert.setCreatedAt(LocalDateTime.now());
-        alertRepository.save(alert);
+        Alert savedAlert = alertRepository.save(alert);
+
+        alertWebSocketService.sendAlertToAll(savedAlert);
         
         SafetyInterlockDTO dto = new SafetyInterlockDTO();
         dto.setInterlockType(type);

@@ -1,15 +1,20 @@
 package com.fertigate.controller;
 
+import com.fertigate.dto.GanttTaskDTO;
 import com.fertigate.dto.RotationExecutionDTO;
 import com.fertigate.dto.RotationScheduleDTO;
 import com.fertigate.service.RotationScheduleService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/rotation")
 @RequiredArgsConstructor
@@ -86,5 +91,19 @@ public class RotationScheduleController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/gantt")
+    public ResponseEntity<List<GanttTaskDTO>> getGanttTasks(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            LocalDate targetDate = date != null ? date : LocalDate.now();
+            log.info("Fetching gantt tasks for date: {}", targetDate);
+            List<GanttTaskDTO> tasks = rotationScheduleService.getGanttTasks(targetDate);
+            return ResponseEntity.ok(tasks);
+        } catch (Exception e) {
+            log.error("Error fetching gantt tasks: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

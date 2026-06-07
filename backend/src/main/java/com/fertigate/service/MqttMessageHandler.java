@@ -41,6 +41,7 @@ public class MqttMessageHandler {
     private final DeviceRepository deviceRepository;
     private final AlertRepository alertRepository;
     private final IrrigationControlService irrigationControlService;
+    private final AlertWebSocketService alertWebSocketService;
 
     @Value("${mqtt.topics.sensor-data}")
     private String sensorDataTopic;
@@ -368,9 +369,11 @@ public class MqttMessageHandler {
             }
             
             alert.setCreatedAt(LocalDateTime.now());
-            alertRepository.save(alert);
+            Alert savedAlert = alertRepository.save(alert);
             
-            log.info("Alert saved: {}", alert.getMessage());
+            log.info("Alert saved: {}", savedAlert.getMessage());
+
+            alertWebSocketService.sendAlertToAll(savedAlert);
 
             String action = getTextValue(rootNode, "action");
             if ("stop_irrigation".equals(action)) {

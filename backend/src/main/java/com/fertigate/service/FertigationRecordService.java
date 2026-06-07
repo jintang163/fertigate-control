@@ -9,12 +9,18 @@ import com.fertigate.repository.ValveRepository;
 import com.fertigate.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -227,6 +233,182 @@ public class FertigationRecordService {
         stats.put("byExecutionMode", modeStats);
         
         return stats;
+    }
+
+    public byte[] exportToExcel(LocalDateTime startTime, LocalDateTime endTime, UUID zoneId) {
+        log.info("Exporting fertigation records to Excel, startTime: {}, endTime: {}, zoneId: {}", startTime, endTime, zoneId);
+
+        List<IrrigationRecord> records;
+        if (zoneId != null && startTime != null && endTime != null) {
+            records = irrigationRecordRepository.findByZoneIdAndTimeRange(zoneId, startTime, endTime);
+        } else if (zoneId != null) {
+            records = irrigationRecordRepository.findByZoneId(zoneId);
+        } else if (startTime != null && endTime != null) {
+            records = irrigationRecordRepository.findByTimeRange(startTime, endTime);
+        } else {
+            records = irrigationRecordRepository.findAll();
+        }
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("灌肥台账");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+            CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle dataStyle = createDataStyle(workbook);
+            CellStyle summaryStyle = createSummaryStyle(workbook);
+
+            String[] headers = {"记录ID", "灌区名称", "开始时间", "结束时间", "持续时长(分钟)", 
+                              "用水量(m³)", "用肥量(kg)", "肥料类型", "平均EC", "平均pH", 
+                              "执行模式", "灌溉类型", "状态", "备注"};
+
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowNum = 1;
+            BigDecimal totalWater = BigDecimal.ZERO;
+            BigDecimal totalFertilizer = BigDecimal.ZERO;
+
+            for (IrrigationRecord record : records) {
+                Row row = sheet.createRow(rowNum++);
+                int colNum = 0;
+
+                row.createCell(colNum++).setCellValue(record.getId() != null ? record.getId().toString() : "");
+                row.createCell(colNum++).setCellValue(record.getZone() != null ? record.getZone().getName() : "");
+                row.createCell(colNum++).setCellValue(record.getStartTime() != null ? record.getStartTime().format(dateFormatter) : "");
+                row.createCell(colNum++).setCellValue(record.getEndTime() != null ? record.getEndTime().format(dateFormatter) : "");
+
+                long durationMinutes = 0;
+                if (record.getStartTime() != null && record.getEndTime() != null) {
+                    durationMinutes = Duration.between(record.getStartTime(), record.getEndTime()).toMinutes();
+                }
+                row.createCell(colNum++).setCellValue(durationMinutes);
+
+                Cell waterCell = row.createCell(colNum++);
+                waterCell.setCellValue(record.getWaterAmount() != null ? record.getWaterAmount().doubleValue() : 0);
+                waterCell.setCellStyle(dataStyle);
+                if (record.getWaterAmount() != null) {
+                    totalWater = totalWater.add(record.getWaterAmount());
+                }
+
+                Cell fertilizerCell = row.createCell(colNum++);
+                fertilizerCell.setCellValue(record.getFertilizerAmount() != null ? record.getFertilizerAmount().doubleValue() : 0);
+                fertilizerCell.setCellStyle(dataStyle);
+                if (record.getFertilizerAmount() != null) {
+                    totalFertilizer = totalFertilizer.add(record.getFertilizerAmount());
+                }
+
+                row.createCell(colNum++).setCellValue(record.getFertilizerType() != null ? record.getFertilizerType() : "");
+                row.createCell(colNum++).setCellValue(record.getAverageEc() != null ? record.getAverageEc().doubleValue() : 0);
+                row.createCell(colNum++).setCellValue(record.getAveragePh() != null ? record.getAveragePh().doubleValue() : 0);
+                row.createCell(colNum++).setCellValue(getExecutionModeText(record.getExecutionMode()));
+                row.createCell(colNum++).setCellValue(getIrrigationTypeText(record.getIrrigationType()));
+                row.createCell(colNum++).setCellValue(getStatusText(record.getStatus()));
+                row.createCell(colNum++).setCellValue(record.getReason() != null ? record.getReason() : "");
+            }
+
+            Row summaryRow = sheet.createRow(rowNum);
+            int summaryCol = 0;
+            summaryRow.createCell(summaryCol++).setCellValue("合计");
+            Cell totalRecordsCell = summaryRow.createCell(summaryCol++);
+            totalRecordsCell.setCellValue("总记录数: " + records.size());
+            totalRecordsCell.setCellStyle(summaryStyle);
+            summaryCol += 3;
+
+            Cell totalWaterCell = summaryRow.createCell(summaryCol++);
+            totalWaterCell.setCellValue(totalWater.setScale(2, RoundingMode.HALF_UP).doubleValue());
+            totalWaterCell.setCellStyle(summaryStyle);
+
+            Cell totalFertilizerCell = summaryRow.createCell(summaryCol++);
+            totalFertilizerCell.setCellValue(totalFertilizer.setScale(2, RoundingMode.HALF_UP).doubleValue());
+            totalFertilizerCell.setCellStyle(summaryStyle);
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            log.info("Excel export completed, total records: {}", records.size());
+            return out.toByteArray();
+
+        } catch (IOException e) {
+            log.error("Failed to export Excel", e);
+            throw new RuntimeException("导出Excel失败", e);
+        }
+    }
+
+    private CellStyle createHeaderStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        return style;
+    }
+
+    private CellStyle createDataStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        DataFormat format = workbook.createDataFormat();
+        style.setDataFormat(format.getFormat("0.00"));
+        return style;
+    }
+
+    private CellStyle createSummaryStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        DataFormat format = workbook.createDataFormat();
+        style.setDataFormat(format.getFormat("0.00"));
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        return style;
+    }
+
+    private String getExecutionModeText(String mode) {
+        if ("auto".equals(mode)) {
+            return "自动";
+        } else if ("manual".equals(mode)) {
+            return "手动";
+        }
+        return mode != null ? mode : "";
+    }
+
+    private String getIrrigationTypeText(String type) {
+        if ("irrigation".equals(type)) {
+            return "灌溉";
+        } else if ("fertilization".equals(type)) {
+            return "施肥";
+        }
+        return type != null ? type : "";
+    }
+
+    private String getStatusText(String status) {
+        return switch (status) {
+            case "running" -> "进行中";
+            case "completed" -> "已完成";
+            case "emergency_stopped" -> "紧急停止";
+            case "interrupted" -> "异常中断";
+            default -> status != null ? status : "";
+        };
     }
 
     private Map<String, Double> calculateAverageSensorData(UUID zoneId, LocalDateTime startTime, LocalDateTime endTime) {

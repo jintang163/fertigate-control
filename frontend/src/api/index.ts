@@ -114,6 +114,8 @@ export const rotationApi = {
   getActive: () => request.get<any, RotationSchedule[]>('/rotation/active'),
   getById: (id: string) => request.get<any, RotationSchedule>(`/rotation/${id}`),
   getByZone: (zoneId: string) => request.get<any, RotationSchedule[]>(`/rotation/zone/${zoneId}`),
+  getGanttTasks: (date?: string) => 
+    request.get<any, GanttTask[]>('/rotation/gantt', { params: { date } }),
   create: (data: Partial<RotationSchedule>) => 
     request.post<any, RotationSchedule>('/rotation', data),
   generatePlan: (zoneId: string, irrigationType = 'irrigation', priority = 1) => 

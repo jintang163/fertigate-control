@@ -1,5 +1,6 @@
 package com.fertigate.service;
 
+import com.fertigate.dto.GanttTaskDTO;
 import com.fertigate.dto.RotationExecutionDTO;
 import com.fertigate.dto.RotationScheduleDTO;
 import com.fertigate.entity.*;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -368,5 +371,139 @@ public class RotationScheduleService {
         dto.setZoneIds(parseZoneIds(schedule.getZoneIds()));
         
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<GanttTaskDTO> getGanttTasks(LocalDate date) {
+        log.info("Generating gantt tasks for date: {}", date);
+        
+        List<GanttTaskDTO> tasks = new ArrayList<>();
+        List<RotationSchedule> activeSchedules = rotationScheduleRepository.findByIsActiveTrue();
+        
+        LocalDateTime dayStart = date.atStartOfDay();
+        LocalDateTime dayEnd = date.atTime(LocalTime.MAX);
+        
+        List<IrrigationRecord> dayRecords = irrigationRecordRepository.findByTimeRange(dayStart, dayEnd);
+        Map<UUID, List<IrrigationRecord>> zoneRecordsMap = dayRecords.stream()
+                .filter(r -> r.getZone() != null)
+                .collect(Collectors.groupingBy(r -> r.getZone().getId()));
+        
+        for (RotationSchedule schedule : activeSchedules) {
+            List<UUID> zoneIds = parseZoneIds(schedule.getZoneIds());
+            if (zoneIds.isEmpty()) {
+                continue;
+            }
+            
+            List<LocalDateTime> executionTimes = generateExecutionTimes(schedule, date);
+            
+            for (UUID zoneId : zoneIds) {
+                Optional<Zone> zoneOpt = zoneRepository.findById(zoneId);
+                if (zoneOpt.isEmpty()) {
+                    continue;
+                }
+                Zone zone = zoneOpt.get();
+                
+                List<IrrigationRecord> zoneRecords = zoneRecordsMap.getOrDefault(zoneId, Collections.emptyList());
+                
+                for (int i = 0; i < executionTimes.size(); i++) {
+                    LocalDateTime taskStart = executionTimes.get(i);
+                    int durationSeconds = schedule.getDuration() != null ? schedule.getDuration() : 1800;
+                    LocalDateTime taskEnd = taskStart.plusSeconds(durationSeconds);
+                    
+                    GanttTaskDTO task = new GanttTaskDTO();
+                    task.setId(UUID.randomUUID());
+                    task.setName(schedule.getName() + " - " + zone.getName());
+                    task.setStart(taskStart);
+                    task.setEnd(taskEnd);
+                    task.setZoneId(zoneId);
+                    task.setZoneName(zone.getName());
+                    
+                    calculateProgressAndStatus(task, zoneRecords, schedule.getName());
+                    
+                    tasks.add(task);
+                }
+            }
+        }
+        
+        log.info("Generated {} gantt tasks for date {}", tasks.size(), date);
+        return tasks;
+    }
+
+    private List<LocalDateTime> generateExecutionTimes(RotationSchedule schedule, LocalDate date) {
+        List<LocalDateTime> times = new ArrayList<>();
+        
+        LocalTime startTime = schedule.getStartTime();
+        if (startTime == null) {
+            startTime = LocalTime.of(6, 0);
+        }
+        
+        LocalTime endTime = schedule.getEndTime();
+        if (endTime == null) {
+            endTime = LocalTime.of(22, 0);
+        }
+        
+        int intervalHours = schedule.getIntervalHours() != null && schedule.getIntervalHours() > 0 
+                ? schedule.getIntervalHours() : 24;
+        
+        LocalDateTime current = LocalDateTime.of(date, startTime);
+        LocalDateTime dayEnd = LocalDateTime.of(date, endTime);
+        
+        while (!current.isAfter(dayEnd)) {
+            times.add(current);
+            current = current.plusHours(intervalHours);
+        }
+        
+        return times;
+    }
+
+    private void calculateProgressAndStatus(GanttTaskDTO task, List<IrrigationRecord> zoneRecords, String scheduleName) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime taskStart = task.getStart();
+        LocalDateTime taskEnd = task.getEnd();
+        
+        String searchReason = "轮灌调度: " + scheduleName;
+        List<IrrigationRecord> relatedRecords = zoneRecords.stream()
+                .filter(r -> r.getReason() != null && r.getReason().contains(searchReason))
+                .filter(r -> !r.getStartTime().isBefore(taskStart.minusMinutes(30)) && !r.getStartTime().isAfter(taskEnd.plusMinutes(30)))
+                .collect(Collectors.toList());
+        
+        if (!relatedRecords.isEmpty()) {
+            IrrigationRecord latestRecord = relatedRecords.get(0);
+            String recordStatus = latestRecord.getStatus();
+            
+            if ("running".equals(recordStatus)) {
+                task.setStatus("running");
+                long totalSeconds = Duration.between(taskStart, taskEnd).getSeconds();
+                long elapsedSeconds = Duration.between(taskStart, now).getSeconds();
+                double progress = Math.min(100.0, (double) elapsedSeconds / totalSeconds * 100);
+                task.setProgress(Math.round(progress * 10.0) / 10.0);
+            } else if ("completed".equals(recordStatus)) {
+                task.setStatus("completed");
+                task.setProgress(100.0);
+            } else if ("emergency_stopped".equals(recordStatus) || "interrupted".equals(recordStatus)) {
+                task.setStatus("cancelled");
+                task.setProgress(0.0);
+            } else {
+                determineDefaultStatus(task, now, taskStart, taskEnd);
+            }
+        } else {
+            determineDefaultStatus(task, now, taskStart, taskEnd);
+        }
+    }
+
+    private void determineDefaultStatus(GanttTaskDTO task, LocalDateTime now, LocalDateTime taskStart, LocalDateTime taskEnd) {
+        if (now.isBefore(taskStart)) {
+            task.setStatus("pending");
+            task.setProgress(0.0);
+        } else if (now.isAfter(taskEnd)) {
+            task.setStatus("completed");
+            task.setProgress(100.0);
+        } else {
+            task.setStatus("running");
+            long totalSeconds = Duration.between(taskStart, taskEnd).getSeconds();
+            long elapsedSeconds = Duration.between(taskStart, now).getSeconds();
+            double progress = Math.min(100.0, (double) elapsedSeconds / totalSeconds * 100);
+            task.setProgress(Math.round(progress * 10.0) / 10.0);
+        }
     }
 }

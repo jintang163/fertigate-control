@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { ControlStatus, Alert, Device, Valve } from '@/types'
 import { dashboardApi, alertApi, irrigationApi, deviceApi } from '@/api'
+import { alertWebSocket } from '@/utils/websocket'
 
 export const useAppStore = defineStore('app', () => {
   const controlStatus = ref<ControlStatus | null>(null)
@@ -10,6 +11,8 @@ export const useAppStore = defineStore('app', () => {
   const valves = ref<Valve[]>([])
   const overviewData = ref<any>(null)
   const loading = ref(false)
+  const webSocketConnected = ref(false)
+  let alertUnsubscribe: (() => void) | null = null
 
   const alertCount = computed(() => unacknowledgedAlerts.value.length)
   const criticalAlerts = computed(() => 
@@ -91,6 +94,33 @@ export const useAppStore = defineStore('app', () => {
     return irrigationApi.controlValve(valveId, open, reason)
   }
 
+  function initWebSocket() {
+    alertUnsubscribe = alertWebSocket.onAlert((alert) => {
+      const exists = unacknowledgedAlerts.value.some(a => a.id === alert.id)
+      if (!exists) {
+        unacknowledgedAlerts.value.unshift(alert)
+      }
+    })
+    alertWebSocket.connect()
+    webSocketConnected.value = true
+  }
+
+  function disconnectWebSocket() {
+    if (alertUnsubscribe) {
+      alertUnsubscribe()
+      alertUnsubscribe = null
+    }
+    alertWebSocket.disconnect()
+    webSocketConnected.value = false
+  }
+
+  function handleRealtimeAlert(alert: Alert) {
+    const exists = unacknowledgedAlerts.value.some(a => a.id === alert.id)
+    if (!exists) {
+      unacknowledgedAlerts.value.unshift(alert)
+    }
+  }
+
   return {
     controlStatus,
     unacknowledgedAlerts,
@@ -98,6 +128,7 @@ export const useAppStore = defineStore('app', () => {
     valves,
     overviewData,
     loading,
+    webSocketConnected,
     alertCount,
     criticalAlerts,
     fetchControlStatus,
@@ -110,6 +141,9 @@ export const useAppStore = defineStore('app', () => {
     emergencyStop,
     acknowledgeAlert,
     acknowledgeAllAlerts,
-    controlValve
+    controlValve,
+    initWebSocket,
+    disconnectWebSocket,
+    handleRealtimeAlert
   }
 })

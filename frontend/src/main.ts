@@ -30,6 +30,7 @@ import {
 import App from './App.vue'
 import router from './router'
 import './style.css'
+import { useAppStore } from './stores'
 
 use([
   CanvasRenderer,
@@ -63,5 +64,8 @@ for (const [key, component] of Object.entries(Icons)) {
 }
 
 app.component('VChart', VChart)
+
+const appStore = useAppStore(pinia)
+appStore.initWebSocket()
 
 app.mount('#app')
